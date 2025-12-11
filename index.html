@@ -1,1 +1,80 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>My Todos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10b981">
+  <link rel="manifest" href="data:application/manifest+json,{
+    \"name\": \"My Todos\",
+    \"short_name\": \"Todos\",
+    \"start_url\": \".\",
+    \"display\": \"standalone\",
+    \"background_color\": \"#ffffff\",
+    \"theme_color\": \"#10b981\",
+    \"icons\": [{\"src\": \"https://supabase.com/favicon.ico\", \"sizes\": \"192x192\", \"type\": \"image/png\"}]
+  }">
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+    
+    const supabase = createClient(
+      'https://YOUR-PROJECT.supabase.co',  // ← Replace with your Supabase URL
+      'your-anon-public-key-here'           // ← Replace with your anon key
+    )
+
+    const list = document.getElementById('list')
+    const input = document.getElementById('input')
+
+    async function load() {
+      const { data } = await supabase
+        .from('todos')
+        .select()
+        .order('created_at', { ascending: false })
+      
+      list.innerHTML = data.map(t => `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #eee">
+          <input type="checkbox" ${t.is_complete?'checked':''} 
+                 onchange="supabase.from('todos').update({is_complete:this.checked}).eq('id',${t.id}).then(load)">
+          <span style="flex:1;${t.is_complete?'text-decoration:line-through;color:#888':''}">
+            ${t.task}
+          </span>
+          <button onclick="supabase.from('todos').delete().eq('id',${t.id}).then(load)" 
+                  style="color:red;font-size:14px">Delete</button>
+        </div>`).join('')
+    }
+
+    document.getElementById('form').onsubmit = e => {
+      e.preventDefault()
+      if (input.value.trim()) {
+        supabase.from('todos').insert({task: input.value.trim(), is_complete: false}).then(() => {
+          input.value = ''
+          load()
+        })
+      }
+    }
+
+    // Realtime — instant sync
+    supabase.channel('todos')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, load)
+      .subscribe()
+
+    load()
+  </script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background:#f9fafb; }
+    h1 { color: #10b981; text-align: center; }
+    input[type=text] { flex: 1; padding: 14px; font-size: 16px; border: 1px solid #ddd; border-radius: 8px; }
+    button { padding: 14px 24px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    #form { display: flex; gap: 10px; margin: 30px 0; }
+  </style>
+</head>
+<body>
+  <h1>My Todos</h1>
+  <form id="form">
+    <input id="input" placeholder="What needs to be done?" autofocus required>
+    <button>Add</button>
+  </form>
+  <div id="list"></div>
+</body>
+</html>
