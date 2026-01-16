@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Create Account | Shared Workspace</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { --primary: #10b981; --primary-dark: #059669; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; --text-muted: #6b7280; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .auth-card { background: var(--card); padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+    h1 { font-size: 24px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.025em; }
+    p { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+    input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; font-size: 15px; }
+    input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
+    .btn-primary { background: var(--primary); color: white; padding: 12px; width: 100%; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; margin-top: 10px; font-size: 16px; transition: background 0.2s; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .footer-link { margin-top: 20px; font-size: 13px; color: var(--text-muted); }
+    .footer-link a { color: var(--primary); text-decoration: none; font-weight: 600; }
+    #message { font-size: 13px; margin-top: 15px; display: none; padding: 10px; border-radius: 8px; }
+    .error { background: #fee2e2; color: #ef4444; }
+    .success { background: #dcfce7; color: #10b981; }
+  </style>
+</head>
+<body>
+
+  <div class="auth-card">
+    <h1>Create Account</h1>
+    <p>Join the shared live workspace</p>
+    
+    <form id="signup-form">
+      <input type="email" id="email" placeholder="Email Address" required>
+      <input type="password" id="password" placeholder="Password" required>
+      <input type="password" id="confirm-password" placeholder="Confirm Password" required>
+      <button type="submit" class="btn-primary" id="signup-btn">Create Account</button>
+    </form>
+
+    <div id="message"></div>
+
+    <div class="footer-link">
+      Already have an account? <a href="index.html">Log In</a>
+    </div>
+  </div>
+
+  
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+    
+    // Replace these with your actual Supabase details
+    const SUPABASE_URL = 'https://hdzmbngzplkgkchmxfwu.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkem1ibmd6cGxrZ2tjaG14Znd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzgyNzc3NjQsImV4cCI6MTk5Mzg1Mzc2NH0.ogb5FZ_nfUdIcobdas9EFm7u8vOs8-_RB2CB4MxLMAU';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const form = document.getElementById('signup-form');
+    const msgBox = document.getElementById('message');
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+
+      // Reset message
+      msgBox.style.display = 'none';
+
+      // 1. Password Matching Check
+      if (password !== confirmPassword) {
+        showMessage("Passwords do not match.", "error");
+        return;
+      }
+
+      // 2. Supabase SignUp
+      const { data, error } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+      });
+
+      if (error) {
+        showMessage(error.message, "error");
+      } else {
+        showMessage("Success! Check your email for a confirmation link.", "success");
+        form.reset();
+      }
+    };
+
+    function showMessage(text, type) {
+      msgBox.innerText = text;
+      msgBox.className = type;
+      msgBox.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
