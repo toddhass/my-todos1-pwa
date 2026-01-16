@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Live Workspace | Animated</title>
+  <title>Live Workspace</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root { --primary: #10b981; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; --text-muted: #6b7280; }
     
-    /* The Visual "Bell & Whistle" Highlight */
+    /* Animation for record changes */
     @keyframes pulse-highlight {
       0% { background-color: rgba(16, 185, 129, 0.4); transform: scale(1.02); }
       100% { background-color: #f9fafb; transform: scale(1); }
@@ -15,7 +15,6 @@
     .item-updated { 
       animation: pulse-highlight 1.5s ease-out; 
       border-left: 4px solid var(--primary) !important;
-      z-index: 10;
     }
 
     body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); max-width: 500px; margin: 40px auto; padding: 20px; }
@@ -25,8 +24,7 @@
     .user-pill { font-size: 10px; background: #e5e7eb; padding: 4px 10px; border-radius: 20px; font-weight: 600; border: 1px solid #d1d5db; }
     
     input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; font-size: 15px; }
-    .btn-primary { background: var(--primary); color: white; padding: 12px; width: 100%; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
-    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary { background: var(--primary); color: white; padding: 12px; width: 100%; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
 
     .todo-item { 
       display: grid; 
@@ -38,7 +36,7 @@
       border-radius: 12px; 
       margin-bottom: 8px; 
       border: 1px solid transparent; 
-      transition: transform 0.2s ease;
+      transition: all 0.2s;
     }
     .todo-text { font-size: 14px; font-weight: 500; word-break: break-word; }
     .todo-meta { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
@@ -54,6 +52,7 @@
 </head>
 <body>
 
+  <div style="font-size: 11px; color: var(--text-muted); font-weight: bold; margin-bottom: 5px;">ONLINE NOW:</div>
   <div id="presence-list"></div>
 
   <div class="app-card">
@@ -69,7 +68,7 @@
 
     <div id="todo-app" style="display: none;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <span id="display-user" style="font-size: 12px; font-weight: bold;"></span>
+        <span id="display-user" style="font-size: 12px; font-weight: bold; color: var(--primary);"></span>
         <button id="btn-logout" style="background:none; color:red; font-size:11px; border:none; cursor:pointer;">Logout</button>
       </div>
       <div id="typing-box" style="font-size:11px; color:var(--primary); height:15px; font-style:italic; margin-bottom:5px;"></div>
@@ -87,27 +86,28 @@
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
     const supabase = createClient('https://hdzmbngzplkgkchmxfwu.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkem1ibmd6cGxrZ2tjaG14Znd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzgyNzc3NjQsImV4cCI6MTk5Mzg1Mzc2NH0.ogb5FZ_nfUdIcobdas9EFm7u8vOs8-_RB2CB4MxLMAU');
 
-    let _channel, _ip = "Unknown";
+    let _channel, _ip = "Unknown", _uName = "User";
     const _list = document.getElementById('todo-list');
 
-    // --- Presence & Alerts ---
+    // --- Helpers ---
     async function getIP() { try { const r = await fetch('https://api.ipify.org?format=json'); const d = await r.json(); _ip = d.ip; } catch(e){} }
     getIP();
 
-    function getName(email) { return email ? email.split('@')[0] : "User"; }
+    function getName(email) { return email ? email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1) : "Someone"; }
     
     function toast(msg) { 
       const t = document.getElementById('toast'); 
       if(t){ t.innerText = msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 3000); } 
     }
 
-    // --- Auth Handlers ---
+    // --- Auth Logic ---
     const loginBtn = document.getElementById('btn-login');
     if (loginBtn) {
       loginBtn.onclick = async () => {
-        const email = document.getElementById('user-email').value;
-        const pass = document.getElementById('user-pass').value;
-        const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+        const { error } = await supabase.auth.signInWithPassword({ 
+          email: document.getElementById('user-email').value, 
+          password: document.getElementById('user-pass').value 
+        });
         if(error) alert(error.message);
       };
     }
@@ -122,13 +122,14 @@
       document.getElementById('todo-app').style.display = session ? 'block' : 'none';
       document.getElementById('auth-ui').style.display = session ? 'none' : 'block';
       if (session) {
-        document.getElementById('display-user').innerText = "Logged in: " + getName(session.user.email);
+        _uName = getName(session.user.email);
+        document.getElementById('display-user').innerText = "Active: " + _uName;
         load();
         initRealtime(session.user);
       }
     });
 
-    // --- Core Database Operations ---
+    // --- Core Database Logic ---
     async function load() {
       const { data } = await supabase.from('todos').select('*').order('id', { ascending: false });
       if (data) render(data);
@@ -141,14 +142,14 @@
           <input type="checkbox" ${t.is_complete ? 'checked' : ''} class="task-cb" style="width:18px; height:18px; cursor:pointer;">
           <div>
             <div class="todo-text ${t.is_complete ? 'completed' : ''}">${t.task}</div>
-            <div class="todo-meta">Source: ${t.ip_address || '---'}</div>
+            <div class="todo-meta">Source: ${t.ip_address || 'Internal'}</div>
           </div>
           <button class="delete-btn">&times;</button>
         </div>
       `).join('');
     }
 
-    // Event Delegation
+    // Global Listener (Hardened Delegation)
     _list.onclick = async (e) => {
       const item = e.target.closest('.todo-item');
       if (!item) return;
@@ -161,23 +162,24 @@
       }
     };
 
+    // --- Realtime / Presence / Tab Count ---
     function initRealtime(user) {
-      const uName = getName(user.email);
-      _channel = supabase.channel('shared_v_final', { config: { presence: { key: uName } } });
+      _channel = supabase.channel('shared_v_final', { config: { presence: { key: _uName } } });
 
       _channel
         .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, async (payload) => {
-          // 1. Contextual Toasts
-          if (payload.eventType === 'INSERT') toast(`➕ Added: ${payload.new.task}`);
-          if (payload.eventType === 'DELETE') toast(`🗑️ A task was removed`);
+          // 1. Descriptive Toasts
+          if (payload.eventType === 'INSERT') toast(`➕ Task added: ${payload.new.task}`);
+          if (payload.eventType === 'DELETE') toast(`🗑️ Task removed`);
           if (payload.eventType === 'UPDATE') {
-            toast(payload.new.is_complete ? "✅ Task Completed" : "🔄 Task Reopened");
+             const status = payload.new.is_complete ? "✅ Finished" : "🔄 Reopened";
+             toast(`${status}: ${payload.new.task}`);
           }
 
-          // 2. Load the data
+          // 2. Refresh the list
           await load();
 
-          // 3. Visual Pulse Animation (with delay to ensure DOM is ready)
+          // 3. Visual Pulse Animation
           setTimeout(() => {
             const changedId = payload.new ? payload.new.id : payload.old.id;
             const row = document.querySelector(`[data-id="${changedId}"]`);
@@ -188,26 +190,26 @@
           }, 100);
         })
         .on('presence', { event: 'sync' }, () => {
-  const state = _channel.presenceState();
-  const count = Object.keys(state).length; // Get the number of users
-  
-  // Update the Presence List in the UI
-  const pList = document.getElementById('presence-list');
-  if(pList) pList.innerHTML = Object.keys(state).map(n => `<div class="user-pill">● ${n}</div>`).join('');
-  
-  // THE NEW PART: Update the Browser Tab Title
-  const baseTitle = "Live Workspace";
-  document.title = count > 0 ? `(${count}) ${baseTitle}` : baseTitle;
-})
+          const state = _channel.presenceState();
+          const count = Object.keys(state).length;
+          
+          // Update Tab Title with Count
+          document.title = count > 1 ? `(${count}) Live Workspace` : `Live Workspace`;
+
+          // Update Online Pills
+          const pList = document.getElementById('presence-list');
+          if(pList) pList.innerHTML = Object.keys(state).map(n => `<div class="user-pill">● ${n}</div>`).join('');
+        })
         .on('broadcast', { event: 'typing' }, ({ payload }) => {
           const tBox = document.getElementById('typing-box');
           if(tBox) tBox.innerText = payload.typing ? `${payload.name} is typing...` : '';
         })
         .subscribe(async (s) => { if (s === 'SUBSCRIBED') await _channel.track({ online_at: new Date() }); });
 
+      // Typing broadcast
       document.getElementById('todo-input').oninput = (e) => {
         if (_channel.state === 'joined') {
-          _channel.send({ type: 'broadcast', event: 'typing', payload: { name: uName, typing: e.target.value.length > 0 } });
+          _channel.send({ type: 'broadcast', event: 'typing', payload: { name: _uName, typing: e.target.value.length > 0 } });
         }
       };
     }
