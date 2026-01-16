@@ -2,27 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Live Workspace | Priorities</title>
+  <title>Live Workspace | Full Names</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root { --primary: #10b981; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; --text-muted: #6b7280; }
     
-    /* Change Animations */
     @keyframes pulse-highlight {
       0% { background-color: rgba(16, 185, 129, 0.4); transform: scale(1.01); }
       100% { transform: scale(1); }
     }
-    .item-updated { animation: pulse-highlight 1.5s ease-out; z-index: 10; }
+    .item-updated { animation: pulse-highlight 1.5s ease-out; }
 
-    /* Priority Styling */
-    .priority-1 { border-left: 4px solid #9ca3af !important; } /* Low */
-    .priority-2 { border-left: 4px solid #3b82f6 !important; } /* Medium */
-    .priority-3 { border-left: 4px solid #ef4444 !important; background-color: #fff1f2 !important; } /* High */
+    .priority-1 { border-left: 4px solid #9ca3af !important; }
+    .priority-2 { border-left: 4px solid #3b82f6 !important; }
+    .priority-3 { border-left: 4px solid #ef4444 !important; background-color: #fff1f2 !important; }
 
     .p-badge {
       font-size: 9px; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;
       font-weight: 800; margin-right: 8px; cursor: pointer; display: inline-block;
-      user-select: none; border: 1px solid rgba(0,0,0,0.1);
+      border: 1px solid rgba(0,0,0,0.1);
     }
     .p-badge.priority-1 { background: #e5e7eb; color: #4b5563; }
     .p-badge.priority-2 { background: #dbeafe; color: #1e40af; }
@@ -34,15 +32,15 @@
     #presence-list { display: flex; gap: 8px; margin-bottom: 12px; min-height: 25px; flex-wrap: wrap; }
     .user-pill { font-size: 10px; background: #e5e7eb; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
     
-    input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; font-size: 15px; }
+    input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; }
     .btn-primary { background: var(--primary); color: white; padding: 12px; width: 100%; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
 
     .todo-item { 
       display: grid; grid-template-columns: 30px 1fr 40px; align-items: center; 
       gap: 12px; padding: 12px; background: #f9fafb; border-radius: 12px; 
-      margin-bottom: 8px; border: 1px solid transparent; transition: all 0.2s;
+      margin-bottom: 8px; border: 1px solid transparent; 
     }
-    .todo-text { font-size: 14px; font-weight: 500; word-break: break-word; display: flex; align-items: center; }
+    .todo-text { font-size: 14px; font-weight: 500; display: flex; align-items: center; }
     .todo-meta { font-size: 9px; color: var(--text-muted); margin-top: 4px; }
     .completed { text-decoration: line-through; opacity: 0.5; }
     .delete-btn { color: #ef4444; background: none; font-size: 22px; cursor: pointer; border: none; }
@@ -65,7 +63,7 @@
       <input type="password" id="user-pass" placeholder="Password">
       <button class="btn-primary" id="btn-login">Login</button>
       <div style="margin-top: 15px; font-size: 13px; text-align: center;">
-        New? <a href="signup.html" style="color: var(--primary); font-weight: 600; text-decoration: none;">Create account</a>
+        <a href="signup.html" style="color: var(--primary); text-decoration: none;">Create account</a>
       </div>
     </div>
 
@@ -78,13 +76,13 @@
       <div id="typing-box" style="font-size:10px; color:var(--primary); height:14px; font-style:italic; margin-bottom:4px;"></div>
       
       <form id="todo-form">
-        <input type="text" id="todo-input" placeholder="Enter task..." required autocomplete="off">
-        <select id="todo-priority" style="margin-bottom: 10px;">
+        <input type="text" id="todo-input" placeholder="New task..." required autocomplete="off">
+        <select id="todo-priority">
           <option value="1">Low Urgency</option>
           <option value="2">Medium Urgency</option>
           <option value="3">High Urgency 🚨</option>
         </select>
-        <button class="btn-primary" type="submit">Add Task</button>
+        <button class="btn-primary" type="submit" style="margin-top:10px;">Add Task</button>
       </form>
       
       <div id="todo-list" style="margin-top: 20px;"></div>
@@ -100,14 +98,12 @@
     let _channel, _ip = "Unknown", _uName = "User";
     const _list = document.getElementById('todo-list');
 
-    // --- Helpers ---
     async function getIP() { try { const r = await fetch('https://api.ipify.org?format=json'); const d = await r.json(); _ip = d.ip; } catch(e){} }
     getIP();
 
     function getName(email) { return email ? email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1) : "User"; }
     function toast(msg) { const t = document.getElementById('toast'); if(t){ t.innerText = msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 3000); } }
 
-    // --- Auth ---
     document.getElementById('btn-login').onclick = async () => {
       const { error } = await supabase.auth.signInWithPassword({ 
         email: document.getElementById('user-email').value, 
@@ -116,24 +112,19 @@
       if(error) alert(error.message);
     };
 
-    document.getElementById('btn-logout').onclick = async () => { 
-      if(_channel) await _channel.unsubscribe(); 
-      await supabase.auth.signOut(); 
-      window.location.reload(); 
-    };
+    document.getElementById('btn-logout').onclick = async () => { if(_channel) await _channel.unsubscribe(); await supabase.auth.signOut(); window.location.reload(); };
 
     supabase.auth.onAuthStateChange((event, session) => {
       document.getElementById('todo-app').style.display = session ? 'block' : 'none';
       document.getElementById('auth-ui').style.display = session ? 'none' : 'block';
       if (session) {
         _uName = getName(session.user.email);
-        document.getElementById('display-user').innerText = "Logged in: " + _uName;
+        document.getElementById('display-user').innerText = "Active: " + _uName;
         load();
         initRealtime(session.user);
       }
     });
 
-    // --- Data Management ---
     async function load() {
       const { data } = await supabase.from('todos').select('*').order('priority', { ascending: false }).order('id', { ascending: false });
       if (data) render(data);
@@ -160,33 +151,38 @@
       }).join('');
     }
 
+    // --- Actions with Broadcast ---
     _list.onclick = async (e) => {
       const item = e.target.closest('.todo-item');
       if (!item) return;
       const id = item.dataset.id;
       
+      const sendUpdateSignal = (msg) => {
+        if (_channel) _channel.send({ type: 'broadcast', event: 'action', payload: { name: _uName, msg: msg } });
+      };
+
       if (e.target.classList.contains('task-cb')) {
         await supabase.from('todos').update({ is_complete: e.target.checked }).eq('id', id);
+        sendUpdateSignal(e.target.checked ? "finished a task" : "reopened a task");
       } else if (e.target.classList.contains('delete-btn')) {
         await supabase.from('todos').delete().eq('id', id);
+        sendUpdateSignal("deleted a task");
       } else if (e.target.dataset.action === 'cycle') {
         const current = e.target.classList.contains('priority-3') ? 3 : e.target.classList.contains('priority-2') ? 2 : 1;
         const next = current >= 3 ? 1 : current + 1;
         await supabase.from('todos').update({ priority: next }).eq('id', id);
+        sendUpdateSignal("changed urgency");
       }
     };
 
     function initRealtime(user) {
-      _channel = supabase.channel('v_priority', { config: { presence: { key: _uName } } });
+      _channel = supabase.channel('v_priority_names', { config: { presence: { key: _uName } } });
 
       _channel
         .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, async (payload) => {
-          if (payload.eventType === 'INSERT') toast(`➕ ${payload.new.created_by_name} added a task`);
-          if (payload.eventType === 'UPDATE') toast(`🔄 Change by someone`);
-          if (payload.eventType === 'DELETE') toast(`🗑️ Item deleted`);
-          
+          // If it's a NEW task, the name is in the DB record
+          if (payload.eventType === 'INSERT') toast(`➕ ${payload.new.created_by_name} added: ${payload.new.task}`);
           await load();
-
           setTimeout(() => {
             const changedId = payload.new ? payload.new.id : payload.old.id;
             const row = document.querySelector(`[data-id="${changedId}"]`);
@@ -195,10 +191,11 @@
         })
         .on('presence', { event: 'sync' }, () => {
           const state = _channel.presenceState();
-          const count = Object.keys(state).length;
-          document.title = count > 1 ? `(${count}) Live Workspace` : `Live Workspace`;
-          const pList = document.getElementById('presence-list');
-          if(pList) pList.innerHTML = Object.keys(state).map(n => `<div class="user-pill">● ${n}</div>`).join('');
+          document.title = `(${Object.keys(state).length}) Workspace`;
+          document.getElementById('presence-list').innerHTML = Object.keys(state).map(n => `<div class="user-pill">● ${n}</div>`).join('');
+        })
+        .on('broadcast', { event: 'action' }, ({ payload }) => {
+          toast(`📢 ${payload.name} ${payload.msg}`); // This handles the "Someone" fix!
         })
         .on('broadcast', { event: 'typing' }, ({ payload }) => {
           const tBox = document.getElementById('typing-box');
@@ -218,12 +215,7 @@
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase.from('todos').insert([{ 
-          task: input.value, 
-          user_id: user.id, 
-          created_by_name: _uName,
-          priority: parseInt(prio.value),
-          is_complete: false, 
-          ip_address: _ip 
+          task: input.value, user_id: user.id, created_by_name: _uName, priority: parseInt(prio.value), is_complete: false, ip_address: _ip 
         }]);
       }
       input.value = '';
