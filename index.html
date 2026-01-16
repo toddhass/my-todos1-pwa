@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Shared Workspace</title>
+  <title>Ultra-Live Shared Workspace</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root { --primary: #10b981; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; --text-muted: #6b7280; }
@@ -16,18 +16,15 @@
     body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); max-width: 500px; margin: 40px auto; padding: 20px; }
     .app-card { background: var(--card); padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
     
-    /* Presence & Status */
     #presence-list { display: flex; gap: 8px; margin-bottom: 12px; min-height: 30px; flex-wrap: wrap; align-items: center; }
     .user-pill { font-size: 11px; background: #e5e7eb; padding: 5px 12px; border-radius: 20px; color: var(--text-main); font-weight: 600; border: 1px solid #d1d5db; }
     .typing-indicator { font-size: 11px; color: var(--primary); font-style: italic; height: 18px; margin-bottom: 5px; }
     
-    /* Form */
     input[type="text"], input[type="email"], input[type="password"] { 
       width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; font-size: 15px;
     }
     .btn-primary { background: var(--primary); color: white; padding: 12px; width: 100%; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
 
-    /* List Alignment */
     .todo-item { 
       display: grid; 
       grid-template-columns: 30px 1fr 40px; 
@@ -37,22 +34,22 @@
       background: #f9fafb; 
       border-radius: 12px; 
       margin-bottom: 8px; 
-      transition: all 0.2s;
     }
-    .todo-text { font-size: 14px; word-break: break-word; }
+    .todo-text { font-size: 14px; font-weight: 500; }
+    .todo-meta { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
     .completed { text-decoration: line-through; color: #9ca3af; }
     .delete-btn { color: #ef4444; background: none; font-size: 22px; cursor: pointer; border: none; }
 
     #toast { 
       position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; 
       padding: 14px 20px; border-radius: 12px; display: none; z-index: 1000; font-size: 13px; 
-      border-left: 4px solid var(--primary);
+      border-left: 4px solid var(--primary); box-shadow: 0 10px 15px rgba(0,0,0,0.3);
     }
   </style>
 </head>
 <body>
 
-  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">Online Now:</div>
+  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px; font-weight: bold;">ONLINE NOW:</div>
   <div id="presence-list"></div>
 
   <div class="app-card">
@@ -71,7 +68,7 @@
 
       <div id="typing-box" class="typing-indicator"></div>
       <form id="todo-form">
-        <input type="text" id="todo-input" placeholder="Add to the shared list..." required autocomplete="off">
+        <input type="text" id="todo-input" placeholder="Add to shared list..." required autocomplete="off">
         <button class="btn-primary" type="submit">Add Task</button>
       </form>
 
@@ -92,10 +89,20 @@
 
     const listEl = document.getElementById('todo-list');
     let myChannel;
+    let userIP = "Unknown";
 
-    // --- Helper to turn "john@email.com" into "John" ---
+    // --- Helpers ---
+    async function getIP() {
+      try {
+        const res = await fetch('https://api.ipify.org?format=json');
+        const data = await res.json();
+        userIP = data.ip;
+      } catch (e) { console.error("IP check failed"); }
+    }
+    getIP();
+
     function cleanName(email) {
-      if (!email) return "Guest";
+      if (!email) return "Someone";
       const name = email.split('@')[0];
       return name.charAt(0).toUpperCase() + name.slice(1);
     }
@@ -124,7 +131,7 @@
       document.getElementById('auth-ui').style.display = session ? 'none' : 'block';
       document.getElementById('todo-app').style.display = session ? 'block' : 'none';
       if (session) {
-        document.getElementById('display-name').innerText = "Logged in as: " + cleanName(session.user.email);
+        document.getElementById('display-name').innerText = "Logged in: " + cleanName(session.user.email);
         fetchTodos();
         initRealtime(session.user);
       }
@@ -144,7 +151,10 @@
         item.setAttribute('data-id', t.id);
         item.innerHTML = `
           <input type="checkbox" ${t.is_complete ? 'checked' : ''} style="width: 18px; height: 18px; cursor:pointer;">
-          <div class="todo-text ${t.is_complete ? 'completed' : ''}">${t.task}</div>
+          <div class="todo-content">
+            <div class="todo-text ${t.is_complete ? 'completed' : ''}">${t.task}</div>
+            <div class="todo-meta">IP: ${t.ip_address || '---'}</div>
+          </div>
           <button class="delete-btn">&times;</button>
         `;
 
@@ -162,7 +172,12 @@
       e.preventDefault();
       const input = document.getElementById('todo-input');
       const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from('todos').insert([{ task: input.value, user_id: user.id, is_complete: false }]);
+      await supabase.from('todos').insert([{ 
+        task: input.value, 
+        user_id: user.id, 
+        is_complete: false,
+        ip_address: userIP
+      }]);
       input.value = '';
     };
 
@@ -175,13 +190,21 @@
 
       myChannel
         .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, (payload) => {
-          if (payload.eventType === 'INSERT') showToast(`➕ ${cleanName(payload.new.user_id)} added a task`);
+          // Comprehensive Alerts
+          if (payload.eventType === 'INSERT') showToast(`➕ ${name} added: ${payload.new.task}`);
+          if (payload.eventType === 'DELETE') showToast(`🗑️ A task was removed`);
+          if (payload.eventType === 'UPDATE') {
+             const status = payload.new.is_complete ? '✅ Completed' : '🔄 Re-opened';
+             showToast(`${status}: ${payload.new.task}`);
+          }
+
           fetchTodos();
+          
           setTimeout(() => {
             const changedId = payload.new ? payload.new.id : payload.old.id;
             const el = document.querySelector(`[data-id="${changedId}"]`);
             if (el) { el.classList.add('new-change'); setTimeout(() => el.classList.remove('new-change'), 2000); }
-          }, 100);
+          }, 150);
         })
         .on('presence', { event: 'sync' }, () => {
           const state = myChannel.presenceState();
