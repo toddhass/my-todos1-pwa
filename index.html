@@ -2,18 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Secure My Todos</title>
+  <title>Realtime Secure Todos</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background:#f9fafb; }
     h1 { color: #10b981; text-align: center; }
-    
-    /* Auth Styling */
     #auth-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
     .auth-input-group { display: flex; flex-direction: column; gap: 10px; }
     .auth-buttons { display: flex; gap: 10px; margin-top: 10px; }
-    
-    /* Todo Styling */
     #form { display: flex; gap: 10px; margin: 30px 0; }
     input { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
     button { cursor: pointer; border-radius: 8px; border: none; font-weight: bold; transition: opacity 0.2s; }
@@ -21,11 +17,12 @@
     .btn-primary { background: #10b981; color: white; padding: 12px 24px; }
     .btn-outline { background: #3b82f6; color: white; padding: 8px 16px; }
     .btn-danger { background: #ef4444; color: white; padding: 5px 10px; }
+    .status-badge { font-size: 10px; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 10px; margin-left: 10px; }
   </style>
 </head>
 <body>
 
-  <h1>My Secure Todos</h1>
+  <h1>My Live Todos <span class="status-badge">Realtime ON</span></h1>
 
   <div id="auth-container">
     <div id="logged-out-ui">
@@ -50,7 +47,7 @@
 
   <div id="todo-app" style="display: none;">
     <form id="form">
-      <input type="text" id="todo-input" style="flex:1" placeholder="Add a private task..." required>
+      <input type="text" id="todo-input" style="flex:1" placeholder="Add a task..." required>
       <button class="btn-primary" type="submit">Add</button>
     </form>
     <div id="list"></div>
@@ -65,13 +62,13 @@
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
     window.supabase = supabase;
 
-    // --- Authentication ---
+    // --- Authentication Logic ---
     window.signUp = async () => {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) alert(error.message);
-      else alert("Sign up successful! Check your email for a confirmation link.");
+      else alert("Check your email for a confirmation link!");
     };
 
     window.login = async () => {
@@ -81,17 +78,15 @@
       if (error) alert(error.message);
     };
 
-    window.logout = async () => {
-      await supabase.auth.signOut();
-    };
+    window.logout = async () => { await supabase.auth.signOut(); };
 
-    // --- App Logic ---
+    // --- UI Elements ---
     const todoApp = document.getElementById('todo-app');
     const loggedInUI = document.getElementById('logged-in-ui');
     const loggedOutUI = document.getElementById('logged-out-ui');
     const userDisplay = document.getElementById('user-display');
 
-    // Monitor Auth State
+    // --- Main Logic ---
     supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         loggedInUI.style.display = 'block';
@@ -99,6 +94,7 @@
         todoApp.style.display = 'block';
         userDisplay.innerText = session.user.email;
         load();
+        setupRealtime(session.user.id);
       } else {
         loggedInUI.style.display = 'none';
         loggedOutUI.style.display = 'block';
@@ -107,31 +103,49 @@
       }
     });
 
+    // Fetch data from database
     window.load = async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('todos')
         .select('*')
-        .eq('user_id', user.id) // Security: Only fetch my todos
+        .eq('user_id', user.id)
         .order('id', { ascending: false });
       
-      if (error) {
-        console.error(error);
-        return;
-      }
-
       document.getElementById('list').innerHTML = data.map(t => `
         <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #eee">
           <input type="checkbox" ${t.is_complete ? 'checked' : ''} 
-                 onchange="supabase.from('todos').update({is_complete:this.checked}).eq('id',${t.id}).then(load)">
+                 onchange="supabase.from('todos').update({is_complete:this.checked}).eq('id',${t.id})">
           <span style="flex:1;${t.is_complete ? 'text-decoration:line-through;color:#888' : ''}">${t.task}</span>
-          <button onclick="supabase.from('todos').delete().eq('id',${t.id}).then(load)" 
+          <button onclick="supabase.from('todos').delete().eq('id',${t.id})" 
                   style="color:red; background:none; border:none; cursor:pointer;">Delete</button>
         </div>`).join('');
+    };
+
+    // --- REALTIME SUBSCRIPTION ---
+    // 
+    function setupRealtime(userId) {
+      supabase
+        .channel('any_string_here')
+        .on(
+          'postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'todos',
+            filter: `user_id=eq.${userId}` // Only listen to changes for THIS user
+          }, 
+          (payload) => {
+            console.log('Change detected in database:', payload);
+            load(); // Automatically refresh UI
+          }
+        )
+        .subscribe();
     }
 
+    // Insert data
     document.getElementById('form').onsubmit = async (e) => {
       e.preventDefault();
       const input = document.getElementById('todo-input');
@@ -141,14 +155,11 @@
         const { error } = await supabase.from('todos').insert([{ 
           task: input.value, 
           is_complete: false,
-          user_id: user.id // Ties the row to the logged-in user
+          user_id: user.id 
         }]);
-
         if (error) alert(error.message);
-        else {
-          input.value = '';
-          load();
-        }
+        input.value = '';
+        // We don't need load() here because Realtime handles it!
       }
     };
   </script>
