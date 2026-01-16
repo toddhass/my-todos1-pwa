@@ -1,59 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>My Todos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background:#f9fafb; }
+    h1 { color: #10b981; text-align: center; }
+    input[type=text] { flex: 1; padding: 14px; font-size: 16px; border: 1px solid #ddd; border-radius: 8px; }
+    button#add-btn { padding: 14px 24px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    #form { display: flex; gap: 10px; margin: 30px 0; }
+  </style>
+</head>
+<body>
 
-<script type="module">
-  // 1. Added +esm to the end of the URL
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+  <h1>My Todos</h1>
   
-  const SUPABASE_URL = 'https://hdzmbngzplkgkchmxfwu.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkem1ibmd6cGxrZ2tjaG14Znd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzgyNzc3NjQsImV4cCI6MTk5Mzg1Mzc2NH0.ogb5FZ_nfUdIcobdas9EFm7u8vOs8-_RB2CB4MxLMAU';
+  <form id="form">
+    <input type="text" id="input" placeholder="What needs to be done?" autofocus required>
+    <button id="add-btn" type="submit">Add</button>
+  </form>
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-  
-  // Make these available to the HTML buttons
-  window.supabase = supabase;
+  <div id="list"></div>
 
-  async function load() {
-    const { data, error } = await supabase
-      .from('todos')
-      .select('*')
-      .order('id', { ascending: false });
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
     
-    if (error) {
-      console.error("Fetch error:", error.message);
-      return;
-    }
-    
+    const SUPABASE_URL = 'https://hdzmbngzplkgkchmxfwu.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkem1ibmd6cGxrZ2tjaG14Znd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzgyNzc3NjQsImV4cCI6MTk5Mzg1Mzc2NH0.ogb5FZ_nfUdIcobdas9EFm7u8vOs8-_RB2CB4MxLMAU';
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    window.supabase = supabase; 
+
     const list = document.getElementById('list');
-    list.innerHTML = data.map(t => `
-      <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #eee">
-        <input type="checkbox" ${t.is_complete ? 'checked' : ''} 
-               onchange="supabase.from('todos').update({is_complete:this.checked}).eq('id',${t.id}).then(load)">
-        <span style="flex:1;${t.is_complete ? 'text-decoration:line-through;color:#888' : ''}">${t.task}</span>
-        <button onclick="supabase.from('todos').delete().eq('id',${t.id}).then(load)" 
-                style="color:red; background:none; border:none; cursor:pointer;">Delete</button>
-      </div>`).join('');
-  }
-
-  window.load = load;
-
-  document.getElementById('form').onsubmit = async (e) => {
-    e.preventDefault();
     const input = document.getElementById('input');
-    
-    // We are including a dummy user_id to satisfy your table's "NOT NULL" constraint
-    const { error } = await supabase.from('todos').insert([{ 
-      task: input.value, 
-      is_complete: false,
-      user_id: '00000000-0000-0000-0000-000000000000' 
-    }]);
+    const form = document.getElementById('form');
 
-    if (error) {
-      console.error("Insert error:", error.message);
-      alert("Error: " + error.message);
-    } else {
-      input.value = '';
-      load();
+    window.load = async function load() {
+      const { data, error } = await supabase
+        .from('todos')
+        .select('*')
+        .order('id', { ascending: false });
+      
+      if (error) {
+        console.error("Fetch error:", error.message);
+        return;
+      }
+      
+      list.innerHTML = data.map(t => `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #eee">
+          <input type="checkbox" ${t.is_complete ? 'checked' : ''} 
+                 onchange="supabase.from('todos').update({is_complete:this.checked}).eq('id',${t.id}).then(load)">
+          <span style="flex:1;${t.is_complete ? 'text-decoration:line-through;color:#888' : ''}">${t.task}</span>
+          <button onclick="supabase.from('todos').delete().eq('id',${t.id}).then(load)" 
+                  style="color:red; background:none; border:none; cursor:pointer;">Delete</button>
+        </div>`).join('');
     }
-  };
 
-  load();
-</script>
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const taskValue = input.value.trim();
+      
+      if (taskValue) {
+        // user_id is required by your schema. 
+        // Ensure you have run the SQL to make it NULLABLE or use this placeholder:
+        const { error } = await supabase.from('todos').insert([{ 
+          task: taskValue, 
+          is_complete: false,
+          user_id: '00000000-0000-0000-0000-000000000000' 
+        }]);
+
+        if (error) {
+          console.error("Insert error:", error.message);
+          alert("Database Error: " + error.message);
+        } else {
+          input.value = '';
+          load();
+        }
+      }
+    };
+
+    // Initial load
+    load();
+  </script>
+</body>
+</html>
