@@ -2,61 +2,38 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Live Workspace | Fixed</title>
+  <title>Live Workspace | Hard Reset</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root { --primary: #10b981; --bg: #f8fafc; --text: #0f172a; }
-    body { font-family: 'Inter', system-ui, sans-serif; background: #f1f5f9; color: var(--text); max-width: 550px; margin: 40px auto; padding: 20px; }
-    .app-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-    
-    /* Layout */
-    .todo-item { display: grid; grid-template-columns: 40px 1fr; gap: 12px; padding: 16px; background: #fff; border-radius: 16px; margin-bottom: 12px; border: 1px solid #e2e8f0; position: relative; }
-    .priority-3 { border-left: 5px solid #ef4444; background: #fff1f2; }
-    .priority-2 { border-left: 5px solid #3b82f6; }
-    .priority-1 { border-left: 5px solid #94a3b8; }
-    
-    .todo-text { font-size: 15px; font-weight: 600; }
-    .completed { text-decoration: line-through; opacity: 0.5; }
-    
-    input, select { width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; }
-    .btn-primary { background: var(--primary); color: white; padding: 12px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 10px; }
-    
-    #presence-list { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
-    .user-pill { font-size: 10px; padding: 5px 12px; border-radius: 20px; font-weight: 700; background: #fff; border: 1px solid #e2e8f0; }
-    .reaction-container { display: flex; gap: 4px; margin-top: 10px; }
-    .reaction-btn { font-size: 11px; padding: 2px 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; cursor: pointer; }
-    .claim-btn { font-size: 10px; padding: 2px 8px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; color: var(--primary); font-weight: bold; margin-left: auto; }
-    .delete-btn { position: absolute; top: 10px; right: 10px; color: #cbd5e1; background: none; border: none; cursor: pointer; font-size: 18px; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #f1f5f9; padding: 20px; display: flex; justify-content: center; }
+    .app-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+    input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
+    .btn-primary { background: var(--primary); color: white; padding: 12px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; width: 100%; }
+    #todo-app { display: none; }
+    .todo-item { background: #f9fafb; padding: 12px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee; }
   </style>
 </head>
 <body>
 
-  <div id="presence-list"></div>
-
   <div class="app-card">
-    <div id="auth-ui" style="display:none;">
-      <h2 style="text-align:center;">Sign In</h2>
-      <input type="email" id="u-email" placeholder="Email">
-      <input type="password" id="u-pass" placeholder="Password">
-      <button class="btn-primary" id="do-login">Login</button>
+    <div id="auth-ui">
+      <h2 style="text-align: center;">Sign In</h2>
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="pass" placeholder="Password">
+      <button class="btn-primary" id="login-btn">Login</button>
     </div>
 
-    <div id="todo-app" style="display:none;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <span id="u-display" style="font-weight:800; font-size:12px; color:var(--primary);"></span>
-        <button id="btn-logout" style="background:none; border:none; color:red; cursor:pointer; font-size:11px; font-weight:bold;">LOGOUT</button>
+    <div id="todo-app">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <span id="user-name" style="font-weight: bold; color: var(--primary);"></span>
+        <button id="logout-btn" style="color: red; background: none; border: 1px solid red; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 11px;">FORCE LOGOUT</button>
       </div>
-      
-      <form id="todo-form">
-        <input type="text" id="t-input" placeholder="What's next?" required>
-        <div style="display:flex; gap:8px;">
-          <select id="t-prio" style="flex:1;"><option value="1">Low</option><option value="2">Med</option><option value="3">High</option></select>
-          <input type="datetime-local" id="t-due" style="flex:2;">
-        </div>
-        <button class="btn-primary" type="submit">Add Task</button>
+      <form id="todo-form" style="display: flex; gap: 5px;">
+        <input type="text" id="task-input" placeholder="New task..." required>
+        <button class="btn-primary" style="width: 80px;">Add</button>
       </form>
-      
-      <div id="todo-list" style="margin-top:20px;"></div>
+      <div id="todo-list" style="margin-top: 20px;"></div>
     </div>
   </div>
 
@@ -64,91 +41,60 @@
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
     const supabase = createClient('https://hdzmbngzplkgkchmxfwu.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkem1ibmd6cGxrZ2tjaG14Znd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzgyNzc3NjQsImV4cCI6MTk5Mzg1Mzc2NH0.ogb5FZ_nfUdIcobdas9EFm7u8vOs8-_RB2CB4MxLMAU');
 
-    let _uName = "User", _chan;
+    // FORCE LOGOUT BUTTON
+    document.getElementById('logout-btn').onclick = async () => {
+      console.log("Attempting Logout...");
+      await supabase.auth.signOut();
+      // Fail-safe: Manually clear storage if Supabase is stuck
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.reload();
+    };
 
-    const getHashColor = (s) => `hsl(${[...s].reduce((a,c)=>s.charCodeAt(0)+((a<<5)-a),0)%360}, 70%, 85%)`;
+    // LOGIN
+    document.getElementById('login-btn').onclick = async () => {
+      const email = document.getElementById('email').value;
+      const pass = document.getElementById('pass').value;
+      const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+      if(error) alert(error.message);
+    };
 
-    // --- 1. GLOBAL CLICK LISTENER (Fixes Logout) ---
-    document.addEventListener('click', async (e) => {
-      // Check for Logout
-      if (e.target.id === 'btn-logout') {
-        console.log("Logout triggered");
-        await supabase.auth.signOut();
-        window.location.reload();
-      }
-      
-      // Check for Login
-      if (e.target.id === 'do-login') {
-        const email = document.getElementById('u-email').value;
-        const pass = document.getElementById('u-pass').value;
-        const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-        if(error) alert(error.message);
-      }
-    });
-
-    // --- 2. AUTH STATE ---
+    // AUTH STATE
     supabase.auth.onAuthStateChange((event, session) => {
-      const authBox = document.getElementById('auth-ui');
-      const appBox = document.getElementById('todo-app');
-      
       if (session) {
-        authBox.style.display = 'none';
-        appBox.style.display = 'block';
-        _uName = session.user.user_metadata?.display_name || session.user.email.split('@')[0];
-        document.getElementById('u-display').innerText = "✦ " + _uName.toUpperCase();
+        document.getElementById('auth-ui').style.display = 'none';
+        document.getElementById('todo-app').style.display = 'block';
+        document.getElementById('user-name').innerText = session.user.email.split('@')[0].toUpperCase();
         load();
-        initLive();
       } else {
-        authBox.style.display = 'block';
-        appBox.style.display = 'none';
+        document.getElementById('auth-ui').style.display = 'block';
+        document.getElementById('todo-app').style.display = 'none';
       }
     });
 
-    // --- 3. DATA LOGIC ---
     async function load() {
-      const { data } = await supabase.from('todos').select('*').order('priority', { ascending: false }).order('id', { ascending: false });
+      const { data } = await supabase.from('todos').select('*').order('id', { ascending: false });
       const list = document.getElementById('todo-list');
-      if(data && list) {
-        list.innerHTML = data.map(t => `
-          <div class="todo-item priority-${t.priority}" data-id="${t.id}">
-            <input type="checkbox" ${t.is_complete ? 'checked' : ''} onchange="supabase.from('todos').update({is_complete: this.checked}).eq('id', ${t.id})">
-            <div>
-              <div class="todo-text ${t.is_complete ? 'completed' : ''}">${t.task}</div>
-              <div class="reaction-container">
-                ${['👍','🔥'].map(e => `<button class="reaction-btn" onclick="react(${t.id}, '${e}')">${e} ${(t.reactions || {})[e] || ''}</button>`).join('')}
-                <button class="claim-btn" onclick="supabase.from('todos').update({claimed_by: '${_uName}'}).eq('id', ${t.id})">${t.claimed_by === _uName ? 'Claimed' : 'Claim'}</button>
-              </div>
-            </div>
-            <button class="delete-btn" onclick="supabase.from('todos').delete().eq('id', ${t.id})">&times;</button>
-          </div>
-        `).join('');
-      }
+      list.innerHTML = (data || []).map(t => `
+        <div class="todo-item">
+          <span>${t.task}</span>
+          <button onclick="deleteTask(${t.id})" style="color: red; background: none; border: none; cursor: pointer;">&times;</button>
+        </div>
+      `).join('');
     }
 
-    window.react = async (id, emoji) => {
-      const { data } = await supabase.from('todos').select('reactions').eq('id', id).single();
-      let r = data.reactions || {}; r[emoji] = (r[emoji] || 0) + 1;
-      await supabase.from('todos').update({ reactions: r }).eq('id', id);
+    window.deleteTask = async (id) => {
+      await supabase.from('todos').delete().eq('id', id);
+      load();
     };
 
     document.getElementById('todo-form').onsubmit = async (e) => {
       e.preventDefault();
-      const task = document.getElementById('t-input').value;
-      const prio = document.getElementById('t-prio').value;
-      await supabase.from('todos').insert([{ task, priority: parseInt(prio), created_by_name: _uName }]);
-      document.getElementById('t-input').value = '';
+      const input = document.getElementById('task-input');
+      await supabase.from('todos').insert([{ task: input.value, created_by_name: 'User' }]);
+      input.value = '';
+      load();
     };
-
-    function initLive() {
-      _chan = supabase.channel('sync').on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, load)
-        .on('presence', { event: 'sync' }, () => {
-          const s = _chan.presenceState();
-          document.getElementById('presence-list').innerHTML = Object.keys(s)
-            .filter(n => n.length < 30)
-            .map(n => `<div class="user-pill" style="background:${getHashColor(n)}">● ${n}</div>`).join('');
-        })
-        .subscribe(async (s) => { if (s === 'SUBSCRIBED') await _chan.track({ online_at: new Date() }); });
-    }
   </script>
 </body>
 </html>
