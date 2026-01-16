@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Live Workspace | Pro Full</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#10b981">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
+  <style>
+    :root { --primary: #10b981; --bg: #f8fafc; --text: #0f172a; --text-muted: #64748b; }
+    
+    body { 
+      font-family: 'Inter', system-ui, sans-serif; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); 
+      color: var(--text); margin: 0; padding: 10px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; 
+    }
+
+    .app-card { 
+      background: white; padding: 25px; border-radius: 24px; box-shadow: 0 20px 25px rgba(0,0,0,0.1); 
+      width: 100%; max-width: 550px; box-sizing: border-box; 
+    }
+
+    /* Responsive Layouts */
+    #todo-form div { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+    @media (min-width: 480px) { 
+        .app-card { padding: 32px; } 
+        body { padding: 40px 20px; } 
+        #todo-form div { flex-direction: row; } 
+    }
+
+    .todo-item { 
+      display: grid; grid-template-columns: 40px 1fr; gap: 12px; padding: 18px; 
+      background: rgba(255, 255, 255, 0.9); border-radius: 20px; margin-bottom: 16px; 
+      border: 1px solid #e2e8f0; position: relative; transition: transform 0.2s;
+    }
+    .todo-item:hover { transform: translateY(-2px); }
+    
+    .priority-3 { border-left: 6px solid #ef4444; background: #fff1f2; }
+    .priority-2 { border-left: 6px solid #3b82f6; }
+    .priority-1 { border-left: 6px solid #94a3b8; }
+
+    .todo-text { font-size: 16px; font-weight: 600; line-height: 1.5; }
+    .completed { text-decoration: line-through; opacity: 0.4; }
+
+    input, select { width: 100%; padding: 14px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 15px; box-sizing: border-box; }
+    .btn-primary { background: var(--primary); color: white; padding: 14px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; width: 100%; }
+    
+    #presence-list { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; justify-content: center; }
+    .user-pill { font-size: 11px; padding: 5px 12px; border-radius: 20px; font-weight: 700; background: white; border: 1px solid #e2e8f0; }
+    
+    .reaction-container { display: flex; gap: 6px; margin-top: 12px; }
+    .reaction-btn { font-size: 12px; padding: 5px 10px; background: white; border: 1px solid #e2e8f0; border-radius: 20px; cursor: pointer; }
+    .claim-btn { font-size: 11px; padding: 5px 12px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; color: var(--primary); font-weight: bold; margin-left: auto; }
+    .active-claim { background: var(--primary) !important; color: white !important; }
+    
+    .delete-btn { position: absolute; top: 12px; right: 12px; color: #ccc; background: none; border: none; font-size: 20px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <div id="presence-list"></div>
+
+  <div class="app-card">
+    <div id="auth-ui">
+      <h2 id="auth-title" style="text-align: center;">Workspace</h2>
+      <div id="signup-extra" style="display: none;">
+        <input type="text" id="reg-name" placeholder="Full Name">
+      </div>
+      <input type="email" id="auth-email" placeholder="Email">
+      <input type="password" id="auth-pass" placeholder="Password">
+      <button class="btn-primary" id="btn-auth-submit">Continue</button>
+      <p style="text-align: center; font-size: 13px; margin-top: 15px;">
+        <a href="#" id="auth-toggle" style="color: var(--primary); font-weight: 700; text-decoration: none;">Sign Up Instead</a>
+      </p>
+    </div>
+
+    <div id="todo-app" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <span id="user-display" style="font-weight: 800; font-size: 13px; color: var(--primary);"></span>
+        <button id="btn-logout-force" style="color: #ef4444; background: none; border: 1px solid #ef4444; padding: 4px 10px; border-radius: 8px; cursor: pointer; font-size: 10px; font-weight: bold;">FORCE LOGOUT</button>
+      </div>
+      
+      <form id="todo-form">
+        <input type="text" id="task-input" placeholder="What needs to be done?" required>
+        <div>
+          <select id="task-prio">
+            <option value="1">Low Priority</option>
+            <option value="2">Medium</option>
+            <option value="3">High Priority</option>
+          </select>
+          <input type="datetime-local" id="task-due">
+        </div>
+        <button class="btn-primary" type="submit" style="margin-top: 10px;">Add to Shared List</button>
+      </form>
+      
+      <div id="todo-list" style="margin-top: 30px;"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+    const supabase = createClient('https://hdzmbngzplkgkchmxfwu.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkem1ibmd6cGxrZ2tjaG14Znd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzgyNzc3NjQsImV4cCI6MTk5Mzg1Mzc2NH0.ogb5FZ_nfUdIcobdas9EFm7u8vOs8-_RB2CB4MxLMAU');
+    window.supabase = supabase;
+
+    let _uName = "User", _isSignUp = false, _chan = null;
+
+    const getHashColor = (s) => `hsl(${[...s].reduce((a,c)=>s.charCodeAt(0)+((a<<5)-a),0)%360}, 70%, 85%)`;
+
+    // --- Auth Event Handlers ---
+    document.getElementById('auth-toggle').onclick = (e) => {
+      e.preventDefault();
+      _isSignUp = !_isSignUp;
+      document.getElementById('signup-extra').style.display = _isSignUp ? "block" : "none";
+      document.getElementById('auth-title').innerText = _isSignUp ? "Create Account" : "Sign In";
+      e.target.innerText = _isSignUp ? "Back to Login" : "Sign Up Instead";
+    };
+
+    document.getElementById('btn-auth-submit').onclick = async () => {
+      const email = document.getElementById('auth-email').value;
+      const pass = document.getElementById('auth-pass').value;
+      if (_isSignUp) {
+        const name = document.getElementById('reg-name').value;
+        const { error } = await supabase.auth.signUp({ email, password: pass, options: { data: { display_name: name } } });
+        if(error) alert(error.message); else alert("Account created! You can now log in.");
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+        if(error) alert(error.message);
+      }
+    };
+
+    document.getElementById('btn-logout-force').onclick = async () => {
+      await supabase.auth.signOut();
+      localStorage.clear(); sessionStorage.clear();
+      window.location.reload();
+    };
+
+    // --- Auth State Monitor ---
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        document.getElementById('auth-ui').style.display = 'none';
+        document.getElementById('todo-app').style.display = 'block';
+        _uName = session.user.user_metadata?.display_name || session.user.email.split('@')[0];
+        _uName = _uName.charAt(0).toUpperCase() + _uName.slice(1);
+        document.getElementById('user-display').innerText = "✦ " + _uName.toUpperCase();
+        
+        if (!_chan) initLive();
+      } else {
+        document.getElementById('auth-ui').style.display = 'block';
+        document.getElementById('todo-app').style.display = 'none';
+      }
+    });
+
+    // --- Core Logic ---
+    async function load() {
+      const { data } = await supabase.from('todos').select('*').order('priority', { ascending: false }).order('id', { ascending: false });
+      const listEl = document.getElementById('todo-list');
+      if(data && listEl) {
+        listEl.innerHTML = data.map(t => {
+          const reactions = t.reactions || {};
+          return `
+            <div class="todo-item priority-${t.priority}" data-id="${t.id}">
+              <input type="checkbox" ${t.is_complete ? 'checked' : ''} onchange="supabase.from('todos').update({is_complete: this.checked}).eq('id', ${t.id})">
+              <div>
+                <div class="todo-text ${t.is_complete ? 'completed' : ''}">${t.task}</div>
+                <div class="reaction-container">
+                  ${['👍','🔥','👀'].map(e => `<button class="reaction-btn" onclick="react(${t.id}, '${e}')">${e} ${reactions[e]||''}</button>`).join('')}
+                  <button class="claim-btn ${t.claimed_by === _uName ? 'active-claim' : ''}" onclick="claim(${t.id})">${t.claimed_by === _uName ? 'Claimed ✓' : (t.claimed_by ? 'Take Over' : 'Claim')}</button>
+                </div>
+                <div style="font-size:10px; color:var(--text-muted); margin-top:10px;">By: ${t.created_by_name || 'Team'}</div>
+              </div>
+              <button class="delete-btn" onclick="supabase.from('todos').delete().eq('id', ${t.id})">&times;</button>
+            </div>`;
+        }).join('');
+      }
+    }
+
+    window.react = async (id, emoji) => {
+      const { data } = await supabase.from('todos').select('reactions').eq('id', id).single();
+      let r = data.reactions || {}; r[emoji] = (r[emoji] || 0) + 1;
+      await supabase.from('todos').update({ reactions: r }).eq('id', id);
+    };
+
+    window.claim = async (id) => { await supabase.from('todos').update({ claimed_by: _uName }).eq('id', id); };
+
+    document.getElementById('todo-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('task-input'), prio = document.getElementById('task-prio'), due = document.getElementById('task-due');
+      const { error } = await supabase.from('todos').insert([{ 
+        task: input.value, priority: parseInt(prio.value), due_at: due.value || null, created_by_name: _uName 
+      }]);
+      if (!error) input.value = '';
+    };
+
+    function initLive() {
+      if (_chan) supabase.removeChannel(_chan);
+      _chan = supabase.channel('global-sync', { config: { presence: { key: _uName } } });
+      
+      _chan
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, (p) => { 
+          console.log("Change detected", p);
+          load(); 
+        })
+        .on('presence', { event: 'sync' }, () => {
+          const s = _chan.presenceState();
+          document.getElementById('presence-list').innerHTML = Object.keys(s)
+            .filter(n => n.length < 30)
+            .map(n => `<div class="user-pill" style="background:${getHashColor(n)}">● ${n}</div>`).join('');
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await _chan.track({ online_at: new Date() });
+            load();
+          }
+        });
+    }
+  </script>
+</body>
+</html>
