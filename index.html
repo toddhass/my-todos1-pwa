@@ -2,21 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Shared Workspace - Fixed</title>
+  <title>Shared Workspace</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    :root { --primary: #10b981; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; --text-muted: #6b7280; }
+    :root { --primary: #10b981; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; }
     body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); max-width: 500px; margin: 40px auto; padding: 20px; }
     .app-card { background: var(--card); padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
     #presence-list { display: flex; gap: 8px; margin-bottom: 12px; min-height: 30px; align-items: center; }
     .user-pill { font-size: 11px; background: #e5e7eb; padding: 5px 12px; border-radius: 20px; font-weight: 600; }
     input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; }
     .btn-primary { background: var(--primary); color: white; padding: 12px; width: 100%; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
-    .todo-item { display: grid; grid-template-columns: 30px 1fr 40px; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 12px; margin-bottom: 8px; border: 1px solid transparent; }
-    .todo-text { font-size: 14px; font-weight: 500; }
+    .todo-item { display: grid; grid-template-columns: 30px 1fr 40px; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 12px; margin-bottom: 8px; }
     .completed { text-decoration: line-through; color: #9ca3af; }
     .delete-btn { color: #ef4444; background: none; font-size: 22px; cursor: pointer; border: none; }
-    #toast { position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; padding: 14px 20px; border-radius: 12px; display: none; z-index: 1000; border-left: 4px solid var(--primary); }
   </style>
 </head>
 <body>
@@ -42,7 +40,6 @@
       <div id="todo-list" style="margin-top: 20px;"></div>
     </div>
   </div>
-  <div id="toast"></div>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
@@ -51,20 +48,18 @@
     let myChannel, userIP = "Unknown";
     const listEl = document.getElementById('todo-list');
 
-    // 1. Get IP
     async function getIP() { try { const res = await fetch('https://api.ipify.org?format=json'); const data = await res.json(); userIP = data.ip; } catch(e){} }
     getIP();
 
-    function showToast(msg) { const t = document.getElementById('toast'); if(t) { t.innerText = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 3000); } }
-
-    // 2. Auth Actions
     document.getElementById('login-btn').onclick = async () => {
-      const { error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
-      if (error) await supabase.auth.signUp({ email: email.value, password: password.value });
+      await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
+      await supabase.auth.signUp({ email: email.value, password: password.value });
     };
-    document.getElementById('logout-btn').onclick = () => { supabase.auth.signOut(); window.location.reload(); };
+    document.getElementById('logout-btn').onclick = async () => { 
+        await supabase.auth.signOut(); 
+        window.location.reload(); 
+    };
 
-    // 3. Auth Listener
     supabase.auth.onAuthStateChange((event, session) => {
       document.getElementById('todo-app').style.display = session ? 'block' : 'none';
       document.getElementById('auth-ui').style.display = session ? 'none' : 'block';
@@ -75,26 +70,26 @@
       }
     });
 
-    // 4. Fetch & Render
     async function fetchTodos() {
       const { data } = await supabase.from('todos').select('*').order('id', { ascending: false });
-      if (data) {
-        listEl.innerHTML = data.map(t => `
-          <div class="todo-item" data-id="${t.id}">
-            <input type="checkbox" ${t.is_complete ? 'checked' : ''} class="cb">
-            <div class="todo-text ${t.is_complete ? 'completed' : ''}">${t.task}</div>
-            <button class="delete-btn">&times;</button>
-          </div>
-        `).join('');
-      }
+      if (data) render(data);
     }
 
-    // 5. Global Event Listener (The fix for broken buttons)
+    function render(todos) {
+      listEl.innerHTML = todos.map(t => `
+        <div class="todo-item" data-id="${t.id}">
+          <input type="checkbox" ${t.is_complete ? 'checked' : ''} class="cb">
+          <div class="todo-text ${t.is_complete ? 'completed' : ''}">${t.task}</div>
+          <button class="delete-btn">&times;</button>
+        </div>
+      `).join('');
+    }
+
+    // Glocal listener for Checkboxes and Delete
     listEl.onclick = async (e) => {
       const item = e.target.closest('.todo-item');
       if (!item) return;
       const id = item.dataset.id;
-
       if (e.target.classList.contains('cb')) {
         await supabase.from('todos').update({ is_complete: e.target.checked }).eq('id', id);
       } 
@@ -103,14 +98,9 @@
       }
     };
 
-    // 6. Realtime
     function initRealtime(user) {
-      myChannel = supabase.channel('v_final_fixed')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, (payload) => {
-          if (payload.eventType === 'INSERT') showToast(`➕ Task added`);
-          if (payload.eventType === 'DELETE') showToast(`🗑️ Task removed`);
-          fetchTodos(); 
-        })
+      myChannel = supabase.channel('v_live')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, fetchTodos)
         .on('presence', { event: 'sync' }, () => {
           const state = myChannel.presenceState();
           document.getElementById('presence-list').innerHTML = Object.keys(state).map(n => `<div class="user-pill">${n}</div>`).join('');
@@ -118,12 +108,19 @@
         .subscribe(async (status) => { if (status === 'SUBSCRIBED') await myChannel.track(user.email.split('@')[0]); });
     }
 
-    // 7. Insert
     document.getElementById('todo-form').onsubmit = async (e) => {
       e.preventDefault();
       const input = document.getElementById('todo-input');
       const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from('todos').insert([{ task: input.value, user_id: user.id, is_complete: false, ip_address: userIP }]);
+      
+      if (!user) { alert("Session expired. Please login."); return; }
+
+      await supabase.from('todos').insert([{ 
+        task: input.value, 
+        user_id: user.id, 
+        is_complete: false, 
+        ip_address: userIP 
+      }]);
       input.value = '';
     };
   </script>
