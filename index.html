@@ -10,7 +10,6 @@
     
     .app-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
     
-    /* Luxury Item Card */
     .todo-item { 
       display: grid; grid-template-columns: 40px 1fr; gap: 12px; padding: 16px; 
       background: #fff; border-radius: 16px; margin-bottom: 12px; 
@@ -20,13 +19,11 @@
     .todo-text { font-size: 15px; font-weight: 600; line-height: 1.4; }
     .completed { text-decoration: line-through; opacity: 0.5; }
     
-    /* Priorities & Status */
     .priority-1 { border-left: 5px solid #94a3b8; }
     .priority-2 { border-left: 5px solid #3b82f6; }
     .priority-3 { border-left: 5px solid #ef4444; background: #fff1f2; }
     .p-badge { font-size: 9px; padding: 2px 8px; border-radius: 20px; font-weight: 800; cursor: pointer; border: 1px solid rgba(0,0,0,0.05); }
 
-    /* Identity & UI */
     .user-avatar { width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 900; margin-right: 6px; }
     .user-pill { font-size: 10px; padding: 5px 12px; border-radius: 20px; font-weight: 700; background: #fff; border: 1px solid #e2e8f0; }
     #presence-list { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
@@ -34,7 +31,6 @@
     input, select { width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 14px; box-sizing: border-box; }
     .btn-primary { background: var(--primary); color: white; padding: 12px; width: 100%; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; margin-top: 10px; }
     .delete-btn { position: absolute; top: 10px; right: 10px; color: #cbd5e1; background: none; border: none; cursor: pointer; font-size: 18px; }
-    .todo-item:hover .delete-btn { color: #ef4444; }
 
     .reaction-container { display: flex; gap: 4px; margin-top: 10px; }
     .reaction-btn { font-size: 11px; padding: 2px 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; cursor: pointer; }
@@ -87,20 +83,22 @@
 
     let _channel, _uName = "User", _isSignUp = false, _ip = "Local";
 
-    // --- Helpers ---
+    // --- Identity Helpers ---
     const getHashColor = (s) => `hsl(${[...s].reduce((a,c)=>s.charCodeAt(0)+((a<<5)-a),0)%360}, 70%, 85%)`;
-    const toast = (m) => { const t=document.getElementById('toast'); t.innerText=m; t.style.display='block'; setTimeout(()=>t.style.display='none',3000); };
+    const toast = (m) => { const t=document.getElementById('toast'); if(t) { t.innerText=m; t.style.display='block'; setTimeout(()=>t.style.display='none',3000); } };
     
     // --- Auth Logic ---
     const toggleBtn = document.getElementById('auth-toggle');
-    toggleBtn.onclick = (e) => {
-      e.preventDefault();
-      _isSignUp = !_isSignUp;
-      document.getElementById('auth-title').innerText = _isSignUp ? "Create Account" : "Sign In";
-      document.getElementById('signup-extra').style.display = _isSignUp ? "block" : "none";
-      document.getElementById('auth-msg').innerText = _isSignUp ? "Have an account?" : "New here?";
-      toggleBtn.innerText = _isSignUp ? "Sign In" : "Sign Up";
-    };
+    if(toggleBtn) {
+      toggleBtn.onclick = (e) => {
+        e.preventDefault();
+        _isSignUp = !_isSignUp;
+        document.getElementById('auth-title').innerText = _isSignUp ? "Create Account" : "Sign In";
+        document.getElementById('signup-extra').style.display = _isSignUp ? "block" : "none";
+        document.getElementById('auth-msg').innerText = _isSignUp ? "Have an account?" : "New here?";
+        toggleBtn.innerText = _isSignUp ? "Sign In" : "Sign Up";
+      };
+    }
 
     document.getElementById('btn-auth').onclick = async () => {
       const email = document.getElementById('user-email').value;
@@ -136,7 +134,9 @@
     }
 
     function render(todos) {
-      _list.innerHTML = todos.map(t => {
+      const listEl = document.getElementById('todo-list');
+      if(!listEl) return;
+      listEl.innerHTML = todos.map(t => {
         const p = t.priority || 1, creator = t.created_by_name || 'Team';
         const reactions = t.reactions || {};
         return `
@@ -162,8 +162,10 @@
       }).join('');
     }
 
-    _list.onclick = async (e) => {
-      const id = e.target.closest('.todo-item')?.dataset.id; if(!id) return;
+    document.getElementById('todo-list').onclick = async (e) => {
+      const item = e.target.closest('.todo-item');
+      if(!item) return;
+      const id = item.dataset.id;
       if(e.target.classList.contains('task-cb')) await supabase.from('todos').update({ is_complete: e.target.checked }).eq('id', id);
       if(e.target.classList.contains('delete-btn')) await supabase.from('todos').delete().eq('id', id);
       if(e.target.dataset.action === 'claim') await supabase.from('todos').update({ claimed_by: _uName }).eq('id', id);
@@ -176,7 +178,7 @@
         let r = data.reactions || {}; r[e.target.dataset.emoji] = (r[e.target.dataset.emoji]||0)+1;
         await supabase.from('todos').update({ reactions: r }).eq('id', id);
       }
-      _channel.send({ type:'broadcast', event:'action', payload:{ name:_uName, msg:'updated the workspace' } });
+      if(_channel) _channel.send({ type:'broadcast', event:'action', payload:{ name:_uName, msg:'updated the workspace' } });
     };
 
     function initRealtime() {
