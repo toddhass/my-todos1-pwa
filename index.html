@@ -6,55 +6,68 @@
   <title>My Todos</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#10b981">
-  <link rel="manifest" href="data:application/manifest+json,{
-    \"name\": \"My Todos\",
-    \"short_name\": \"Todos\",
-    \"start_url\": \".\",
-    \"display\": \"standalone\",
-    \"background_color\": \"#ffffff\",
-    \"theme_color\": \"#10b981\",
-    \"icons\": [{\"src\": \"https://supabase.com/favicon.ico\", \"sizes\": \"192x192\", \"type\": \"image/png\"}]
-  }">
-  <script>
-    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-  </script>
-  <script defer src="/_vercel/insights/script.js"></script>
+  
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
     
+    // 1. Corrected initialization with quotes
     const supabase = createClient(
-      https://hdzmbngzplkgkchmxfwu.supabase.co,  // ← Replace with your Supabase URL
-      eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkem1ibmd6cGxrZ2tjaG14Znd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzgyNzc3NjQsImV4cCI6MTk5Mzg1Mzc2NH0.ogb5FZ_nfUdIcobdas9EFm7u8vOs8-_RB2CB4MxLMAU           // ← Replace with your anon key
+      'https://hdzmbngzplkgkchmxfwu.supabase.co', 
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkem1ibmd6cGxrZ2tjaG14Znd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzgyNzc3NjQsImV4cCI6MTk5Mzg1Mzc2NH0.ogb5FZ_nfUdIcobdas9EFm7u8vOs8-_RB2CB4MxLMAU'
     )
+
+    // 2. Make variables global so inline HTML attributes (onclick/onchange) can access them
+    window.supabase = supabase;
 
     const list = document.getElementById('list')
     const input = document.getElementById('input')
 
-    async function load() {
-      const { data } = await supabase
+    window.load = async function load() {
+      const { data, error } = await supabase
         .from('todos')
         .select()
-        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+      
+      if (error) {
+        console.error("Fetch error:", error.message);
+        return;
+      }
       
       list.innerHTML = data.map(t => `
         <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #eee">
-          <input type="checkbox" ${t.is_complete?'checked':''} 
+          <input type="checkbox" ${t.is_complete ? 'checked' : ''} 
                  onchange="supabase.from('todos').update({is_complete:this.checked}).eq('id',${t.id}).then(load)">
-          <span style="flex:1;${t.is_complete?'text-decoration:line-through;color:#888':''}">
+          <span style="flex:1;${t.is_complete ? 'text-decoration:line-through;color:#888' : ''}">
             ${t.task}
           </span>
           <button onclick="supabase.from('todos').delete().eq('id',${t.id}).then(load)" 
-                  style="color:red;font-size:14px">Delete</button>
+                  style="color:red;font-size:14px; background:none; border:none; cursor:pointer;">Delete</button>
         </div>`).join('')
     }
 
-    document.getElementById('form').onsubmit = e => {
+    document.getElementById('form').onsubmit = async (e) => {
       e.preventDefault()
-      if (input.value.trim()) {
-        supabase.from('todos').insert({task: input.value.trim(), is_complete: false}).then(() => {
+      const taskValue = input.value.trim()
+      
+      if (taskValue) {
+        // NOTE: Because your schema has 'user_id NOT NULL', we must provide a UUID.
+        // If you run 'alter table todos alter column user_id drop not null' in Supabase,
+        // you can remove the user_id line below.
+        const { error } = await supabase
+          .from('todos')
+          .insert({ 
+            task: taskValue, 
+            is_complete: false,
+            user_id: '00000000-0000-0000-0000-000000000000' // Placeholder UUID
+          })
+
+        if (error) {
+          alert("Insert failed! Check console for RLS or Schema errors.");
+          console.error("Error inserting:", error.message);
+        } else {
           input.value = ''
           load()
-        })
+        }
       }
     }
 
@@ -65,19 +78,20 @@
 
     load()
   </script>
+
   <style>
     body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background:#f9fafb; }
     h1 { color: #10b981; text-align: center; }
     input[type=text] { flex: 1; padding: 14px; font-size: 16px; border: 1px solid #ddd; border-radius: 8px; }
-    button { padding: 14px 24px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    button#add-btn { padding: 14px 24px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
     #form { display: flex; gap: 10px; margin: 30px 0; }
   </style>
 </head>
 <body>
   <h1>My Todos</h1>
   <form id="form">
-    <input id="input" placeholder="What needs to be done?" autofocus required>
-    <button>Add</button>
+    <input type="text" id="input" placeholder="What needs to be done?" autofocus required>
+    <button id="add-btn">Add</button>
   </form>
   <div id="list"></div>
 </body>
