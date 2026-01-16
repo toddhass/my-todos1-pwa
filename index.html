@@ -14,6 +14,16 @@
       --text-muted: #6b7280;
     }
 
+    @keyframes highlight {
+      0% { background-color: rgba(16, 185, 129, 0.2); transform: scale(1.02); border-color: var(--primary); }
+      100% { background-color: #f9fafb; transform: scale(1); border-color: transparent; }
+    }
+
+    .new-change {
+      animation: highlight 2s ease-out;
+      z-index: 10;
+    }
+
     body { 
       font-family: 'Inter', system-ui, -apple-system, sans-serif; 
       background: var(--bg); 
@@ -23,120 +33,41 @@
       padding: 20px; 
     }
 
-    /* Glassmorphism Card */
     .app-card {
       background: var(--card);
       padding: 30px;
       border-radius: 16px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
     }
 
-    h1 { 
-      font-size: 24px;
-      font-weight: 800;
-      text-align: center; 
-      margin-bottom: 5px;
-      letter-spacing: -0.025em;
-    }
-
-    .status-bar { 
-      text-align: center; 
-      margin-bottom: 25px; 
-      font-size: 12px; 
-      color: var(--text-muted);
-    }
-
+    h1 { font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 5px; letter-spacing: -0.025em; }
+    .status-bar { text-align: center; margin-bottom: 25px; font-size: 12px; color: var(--text-muted); }
     .live-dot { color: var(--primary); font-weight: bold; }
 
-    /* Modern Inputs */
     input[type="email"], input[type="password"], input[type="text"] {
-      width: 100%;
-      padding: 12px 16px;
-      margin: 8px 0;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      font-size: 15px;
-      box-sizing: border-box;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%; padding: 12px 16px; margin: 8px 0; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 15px; box-sizing: border-box;
     }
 
-    input:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-    }
+    button { cursor: pointer; border-radius: 10px; border: none; font-weight: 600; font-size: 14px; transition: all 0.2s; }
+    .btn-primary { background: var(--primary); color: white; padding: 12px 24px; width: 100%; }
+    .btn-outline { background: #f9fafb; color: var(--text-main); border: 1px solid #e5e7eb; padding: 10px 16px; }
+    .btn-danger-link { background: none; color: #ef4444; font-size: 12px; padding: 5px; }
 
-    /* Buttons */
-    button { 
-      cursor: pointer; 
-      border-radius: 10px; 
-      border: none; 
-      font-weight: 600; 
-      font-size: 14px;
-      transition: all 0.2s; 
-    }
-
-    .btn-primary { 
-      background: var(--primary); 
-      color: white; 
-      padding: 12px 24px; 
-      width: 100%;
-    }
-
-    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
-
-    .btn-outline { 
-      background: #f9fafb; 
-      color: var(--text-main); 
-      border: 1px solid #e5e7eb;
-      padding: 10px 16px; 
-    }
-
-    .btn-outline:hover { background: #f3f4f6; }
-
-    .btn-danger-link {
-      background: none;
-      color: #ef4444;
-      font-size: 12px;
-      padding: 5px;
-    }
-
-    /* Todo Item Styling */
     .todo-item { 
-      display: flex; 
-      align-items: center; 
-      gap: 12px; 
-      padding: 14px; 
-      background: #f9fafb;
-      border-radius: 12px;
-      margin-bottom: 10px;
-      border: 1px solid transparent;
-      transition: all 0.2s;
+      display: flex; align-items: center; gap: 12px; padding: 14px; 
+      background: #f9fafb; border-radius: 12px; margin-bottom: 10px; 
+      border: 1px solid transparent; transition: transform 0.2s;
     }
-
-    .todo-item:hover { border-color: #e5e7eb; background: #fff; }
 
     .todo-content { flex: 1; }
-    
-    .todo-text { font-size: 15px; font-weight: 500; transition: all 0.3s; }
-    
-    .todo-meta { 
-      font-size: 10px; 
-      color: var(--text-muted); 
-      text-transform: uppercase; 
-      letter-spacing: 0.05em;
-      margin-top: 2px;
-    }
+    .todo-text { font-size: 15px; font-weight: 500; }
+    .todo-meta { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 
-    /* Checkbox hack for modern look */
-    input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
-      accent-color: var(--primary);
-      cursor: pointer;
+    #toast {
+      position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; 
+      padding: 12px 20px; border-radius: 10px; display: none; font-size: 13px; 
+      z-index: 1000; box-shadow: 0 10px 15px rgba(0,0,0,0.2);
     }
-
-    #list { margin-top: 20px; }
   </style>
 </head>
 <body>
@@ -149,7 +80,7 @@
 
     <div id="auth-container">
       <div id="logged-out-ui">
-        <input type="email" id="email" placeholder="Email address">
+        <input type="email" id="email" placeholder="Email">
         <input type="password" id="password" placeholder="Password">
         <div style="display: flex; gap: 8px; margin-top: 8px;">
           <button class="btn-primary" onclick="window.login()" style="flex:2">Login</button>
@@ -167,14 +98,14 @@
 
     <div id="todo-app" style="display: none;">
       <form id="form" style="display: flex; flex-direction: column;">
-        <input type="text" id="todo-input" placeholder="What needs to be done?" required>
+        <input type="text" id="todo-input" placeholder="Add something to the list..." required>
         <button class="btn-primary" type="submit" style="margin-top: 8px;">Add Task</button>
       </form>
       <div id="list"></div>
     </div>
   </div>
 
-  
+  <div id="toast"></div>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
@@ -195,9 +126,16 @@
     }
     getIP();
 
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.style.display = 'block';
+      setTimeout(() => t.style.display = 'none', 3000);
+    }
+
     window.signUp = async () => {
       const { error } = await supabase.auth.signUp({ email: email.value, password: password.value });
-      if (error) alert(error.message); else alert("Verify your email!");
+      if (error) alert(error.message); else alert("Check your email!");
     };
     window.login = async () => {
       const { error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
@@ -210,18 +148,18 @@
       if (error) return;
 
       const listEl = document.getElementById('list');
-      listEl.innerHTML = data.length === 0 ? '<p style="text-align:center; color:#9ca3af; font-size:14px; margin-top:20px;">No tasks yet. Add one above!</p>' : '';
+      listEl.innerHTML = data.length === 0 ? '<p style="text-align:center; color:#9ca3af; margin-top:20px;">No tasks yet.</p>' : '';
 
       data.forEach(t => {
         const div = document.createElement('div');
         div.className = 'todo-item';
+        div.setAttribute('data-id', t.id);
         
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.checked = t.is_complete;
         cb.onchange = async () => {
           await supabase.from('todos').update({ is_complete: cb.checked }).eq('id', t.id);
-          load(); 
         };
 
         const content = document.createElement('div');
@@ -240,15 +178,11 @@
         content.append(text, meta);
 
         const del = document.createElement('button');
-        del.innerHTML = '&times;'; // Multiplication sign for a clean "X"
-        del.style.background = '#fee2e2';
-        del.style.color = '#ef4444';
-        del.style.width = '28px';
-        del.style.height = '28px';
-        del.style.borderRadius = '50%';
+        del.innerHTML = '&times;';
+        del.style.background = '#fee2e2'; del.style.color = '#ef4444';
+        del.style.width = '28px'; del.style.height = '28px'; del.style.borderRadius = '50%';
         del.onclick = async () => {
           await supabase.from('todos').delete().eq('id', t.id);
-          load();
         };
 
         div.append(cb, content, del);
@@ -258,7 +192,18 @@
 
     function setupRealtime() {
       supabase.channel('global-list')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, load)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, async (payload) => {
+          if (payload.eventType === 'INSERT') showToast(`New task: ${payload.new.task}`);
+          
+          await load(); // Refresh data
+
+          const changedId = payload.new ? payload.new.id : payload.old.id;
+          const element = document.querySelector(`[data-id="${changedId}"]`);
+          if (element) {
+            element.classList.add('new-change');
+            setTimeout(() => element.classList.remove('new-change'), 2000);
+          }
+        })
         .subscribe((status) => {
           document.getElementById('status').innerHTML = (status === 'SUBSCRIBED') ? '<span class="live-dot">● Live</span>' : '○ Offline';
         });
@@ -287,7 +232,6 @@
           ip_address: currentIp 
         }]);
         input.value = '';
-        load();
       }
     };
   </script>
