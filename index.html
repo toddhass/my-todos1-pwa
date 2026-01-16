@@ -2,43 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Shared Workspace</title>
+  <title>Shared Workspace - Debug Mode</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root { --primary: #10b981; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; }
     body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); max-width: 500px; margin: 40px auto; padding: 20px; }
     .app-card { background: var(--card); padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-    #presence-list { display: flex; gap: 5px; margin-bottom: 10px; height: 20px; }
-    .user-pill { font-size: 10px; background: #e5e7eb; padding: 2px 8px; border-radius: 10px; }
+    #presence-list { display: flex; gap: 5px; margin-bottom: 15px; height: 25px; align-items: center; }
+    .user-pill { font-size: 10px; background: #e5e7eb; padding: 4px 8px; border-radius: 20px; border: 1px solid #d1d5db; }
     input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; }
     button { cursor: pointer; border-radius: 10px; border: none; font-weight: 600; }
     .btn-primary { background: var(--primary); color: white; padding: 12px; width: 100%; }
-    .todo-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 12px; margin-bottom: 8px; }
+    .todo-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 12px; margin-bottom: 8px; border: 1px solid transparent; }
     .todo-text { flex: 1; font-size: 14px; }
     .completed { text-decoration: line-through; color: #9ca3af; }
-    .delete-btn { color: #ef4444; background: none; font-size: 18px; padding: 0 10px; }
+    .delete-btn { color: #ef4444; background: none; font-size: 20px; padding: 0 10px; }
+    .live-dot { color: var(--primary); font-weight: bold; font-size: 12px; margin-right: 10px; }
   </style>
 </head>
 <body>
 
-  <div id="presence-list"></div>
+  <div style="display: flex; align-items: center;">
+    <span id="status" class="live-dot">○ Offline</span>
+    <div id="presence-list"></div>
+  </div>
 
   <div class="app-card">
     <div id="auth-ui">
+      <h2 style="margin-top:0">Login</h2>
       <input type="email" id="email" placeholder="Email">
       <input type="password" id="password" placeholder="Password">
-      <button class="btn-primary" id="login-btn">Login / Sign Up</button>
+      <button class="btn-primary" id="login-btn">Sign In / Sign Up</button>
     </div>
 
     <div id="todo-app" style="display: none;">
-      <div id="user-header" style="font-size: 11px; margin-bottom: 10px; display: flex; justify-content: space-between;">
-        <span id="display-email"></span>
-        <button id="logout-btn" style="background:none; color:red; font-size:11px;">Logout</button>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+        <span id="display-email" style="font-size: 12px; color: #666;"></span>
+        <button id="logout-btn" style="background:none; color:red; font-size:12px;">Logout</button>
       </div>
+
       <form id="todo-form">
-        <input type="text" id="todo-input" placeholder="Add a shared task..." required>
+        <input type="text" id="todo-input" placeholder="What needs doing?" required autocomplete="off">
         <button class="btn-primary" type="submit">Add Task</button>
       </form>
+
       <div id="todo-list" style="margin-top: 20px;"></div>
     </div>
   </div>
@@ -46,17 +53,25 @@
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
     
-    const supabase = createClient('https://hdzmbngzplkgkchmxfwu.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkem1ibmd6cGxrZ2tjaG14Znd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzgyNzc3NjQsImV4cCI6MTk5Mzg1Mzc2NH0.ogb5FZ_nfUdIcobdas9EFm7u8vOs8-_RB2CB4MxLMAU');
+    const supabase = createClient(
+      'https://hdzmbngzplkgkchmxfwu.supabase.co', 
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkem1ibmd6cGxrZ2tjaG14Znd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzgyNzc3NjQsImV4cCI6MTk5Mzg1Mzc2NH0.ogb5FZ_nfUdIcobdas9EFm7u8vOs8-_RB2CB4MxLMAU'
+    );
 
     const listEl = document.getElementById('todo-list');
     let myChannel;
 
-    // --- AUTH LOGIC ---
+    // --- 1. AUTH FUNCTIONS ---
     document.getElementById('login-btn').onclick = async () => {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) await supabase.auth.signUp({ email, password });
+      if (error) {
+        // If login fails, try signing up
+        const { error: signUpErr } = await supabase.auth.signUp({ email, password });
+        if (signUpErr) alert("Auth Error: " + signUpErr.message);
+        else alert("Account created! Check email if confirmation is enabled.");
+      }
     };
 
     document.getElementById('logout-btn').onclick = () => supabase.auth.signOut();
@@ -71,9 +86,10 @@
       }
     });
 
-    // --- DATA LOGIC ---
+    // --- 2. DATA FUNCTIONS ---
     async function fetchTodos() {
-      const { data } = await supabase.from('todos').select('*').order('id', { ascending: false });
+      const { data, error } = await supabase.from('todos').select('*').order('id', { ascending: false });
+      if (error) console.error("Fetch Error:", error);
       render(data || []);
     }
 
@@ -88,28 +104,53 @@
           <button class="delete-btn">&times;</button>
         `;
 
-        // Attach events directly to elements (No more inline HTML issues!)
-        item.querySelector('input').onchange = (e) => 
-          supabase.from('todos').update({ is_complete: e.target.checked }).eq('id', t.id);
+        // Checkbox Logic with Error Alert
+        item.querySelector('input').onchange = async (e) => {
+          const isChecked = e.target.checked;
+          const { error } = await supabase.from('todos')
+            .update({ is_complete: isChecked })
+            .eq('id', t.id);
+          
+          if (error) {
+            alert("Database Error: " + error.message);
+            e.target.checked = !isChecked; // Revert checkbox
+          }
+        };
         
-        item.querySelector('.delete-btn').onclick = () => 
-          supabase.from('todos').delete().eq('id', t.id);
+        // Delete Logic with Error Alert
+        item.querySelector('.delete-btn').onclick = async () => {
+          const { error } = await supabase.from('todos')
+            .delete()
+            .eq('id', t.id);
+            
+          if (error) {
+            alert("Delete Error: " + error.message);
+          }
+        };
 
         listEl.appendChild(item);
       });
     }
 
+    // Add New Task
     document.getElementById('todo-form').onsubmit = async (e) => {
       e.preventDefault();
       const input = document.getElementById('todo-input');
       const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from('todos').insert([{ task: input.value, user_id: user.id, is_complete: false }]);
-      input.value = '';
+      
+      const { error } = await supabase.from('todos').insert([
+        { task: input.value, user_id: user.id, is_complete: false }
+      ]);
+
+      if (error) alert("Insert Error: " + error.message);
+      else input.value = '';
     };
 
-    // --- REALTIME ---
+    // --- 3. REALTIME & PRESENCE ---
     function initRealtime(user) {
-      myChannel = supabase.channel('shared_v2')
+      if (myChannel) myChannel.unsubscribe();
+      
+      myChannel = supabase.channel('global_workspace')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, fetchTodos)
         .on('presence', { event: 'sync' }, () => {
           const state = myChannel.presenceState();
@@ -117,7 +158,10 @@
             .map(u => `<div class="user-pill">${u}</div>`).join('');
         })
         .subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') await myChannel.track({ user: user.email });
+          if (status === 'SUBSCRIBED') {
+            document.getElementById('status').innerText = '● Live';
+            await myChannel.track({ user: user.email });
+          }
         });
     }
   </script>
