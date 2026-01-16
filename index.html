@@ -2,24 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Shared Workspace - Hardened</title>
+  <title>Shared Workspace</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root { --primary: #10b981; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; --text-muted: #6b7280; }
     @keyframes highlight { 0% { background: rgba(16, 185, 129, 0.2); } 100% { background: #f9fafb; } }
     .new-change { animation: highlight 2s ease-out; }
     body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); max-width: 500px; margin: 40px auto; padding: 20px; }
-    .app-card { background: var(--card); padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+    .app-card { background: var(--card); padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
     #presence-list { display: flex; gap: 8px; margin-bottom: 12px; min-height: 25px; flex-wrap: wrap; }
     .user-pill { font-size: 10px; background: #e5e7eb; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
-    input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; font-size: 15px; }
+    input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; }
     .btn-primary { background: var(--primary); color: white; padding: 12px; width: 100%; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
-    .todo-item { display: grid; grid-template-columns: 30px 1fr 40px; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 12px; margin-bottom: 8px; border: 1px solid transparent; }
-    .todo-text { font-size: 14px; font-weight: 500; }
-    .todo-meta { font-size: 9px; color: var(--text-muted); }
+    .todo-item { display: grid; grid-template-columns: 30px 1fr 40px; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 12px; margin-bottom: 8px; }
     .completed { text-decoration: line-through; color: #9ca3af; }
     .delete-btn { color: #ef4444; background: none; font-size: 20px; cursor: pointer; border: none; }
-    #toast { position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; padding: 12px 20px; border-radius: 10px; display: none; z-index: 1000; font-size: 13px; border-left: 4px solid var(--primary); }
+    #toast { position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; padding: 12px 20px; border-radius: 10px; display: none; z-index: 1000; border-left: 4px solid var(--primary); }
   </style>
 </head>
 <body>
@@ -28,14 +26,13 @@
 
   <div class="app-card">
     <div id="auth-ui">
-  <h2 style="margin-top:0">Welcome Back</h2>
-  <input type="email" id="user-email" placeholder="Email">
-  <input type="password" id="user-pass" placeholder="Password">
-  <button class="btn-primary" id="btn-login">Login</button>
-  <div style="margin-top: 15px; font-size: 13px; text-align: center; color: var(--text-muted);">
-    Don't have an account? <a href="signup.html" style="color: var(--primary); font-weight: 600; text-decoration: none;">Create one here</a>
-  </div>
-</div>
+      <h2 style="margin-top:0">Welcome Back</h2>
+      <input type="email" id="user-email" placeholder="Email">
+      <input type="password" id="user-pass" placeholder="Password">
+      <button class="btn-primary" id="btn-login">Login</button>
+      <div style="margin-top: 15px; font-size: 13px; text-align: center; color: var(--text-muted);">
+        Don't have an account? <a href="signup.html" style="color: var(--primary); font-weight: 600; text-decoration: none;">Create one here</a>
+      </div>
     </div>
 
     <div id="todo-app" style="display: none;">
@@ -54,6 +51,8 @@
 
   <div id="toast"></div>
 
+  
+
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
     const supabase = createClient('https://hdzmbngzplkgkchmxfwu.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkem1ibmd6cGxrZ2tjaG14Znd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzgyNzc3NjQsImV4cCI6MTk5Mzg1Mzc2NH0.ogb5FZ_nfUdIcobdas9EFm7u8vOs8-_RB2CB4MxLMAU');
@@ -68,28 +67,41 @@
     function getName(email) { return email ? email.split('@')[0] : "User"; }
     function toast(msg) { const t = document.getElementById('toast'); if(t){ t.innerText = msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 3000); } }
 
-    // --- Auth ---
-    document.getElementById('btn-login').onclick = async () => {
-        const { error } = await supabase.auth.signInWithPassword({ email: document.getElementById('user-email').value, password: document.getElementById('user-pass').value });
-        if(error) alert(error.message);
-    };
-    document.getElementById('btn-signup').onclick = async () => {
-        const { error } = await supabase.auth.signUp({ email: document.getElementById('user-email').value, password: document.getElementById('user-pass').value });
-        if(error) alert(error.message); else alert("Check your email!");
-    };
-    document.getElementById('btn-logout').onclick = async () => { if(_channel) await _channel.unsubscribe(); await supabase.auth.signOut(); window.location.reload(); };
+    // --- Auth Logic ---
+    const loginBtn = document.getElementById('btn-login');
+    if (loginBtn) {
+      loginBtn.onclick = async () => {
+        const email = document.getElementById('user-email').value;
+        const pass = document.getElementById('user-pass').value;
+        const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+        if(error) alert("Login Error: " + error.message);
+      };
+    }
+
+    const logoutBtn = document.getElementById('btn-logout');
+    if (logoutBtn) {
+      logoutBtn.onclick = async () => { 
+        if(_channel) await _channel.unsubscribe(); 
+        await supabase.auth.signOut(); 
+        window.location.reload(); 
+      };
+    }
 
     supabase.auth.onAuthStateChange((event, session) => {
-      document.getElementById('todo-app').style.display = session ? 'block' : 'none';
-      document.getElementById('auth-ui').style.display = session ? 'none' : 'block';
+      const appUI = document.getElementById('todo-app');
+      const authUI = document.getElementById('auth-ui');
+      if (appUI && authUI) {
+        appUI.style.display = session ? 'block' : 'none';
+        authUI.style.display = session ? 'none' : 'block';
+      }
       if (session) {
-        document.getElementById('display-user').innerText = getName(session.user.email);
+        document.getElementById('display-user').innerText = "Logged in as: " + getName(session.user.email);
         load();
         initRealtime(session.user);
       }
     });
 
-    // --- Core Logic ---
+    // --- Core Database Logic ---
     async function load() {
       const { data } = await supabase.from('todos').select('*').order('id', { ascending: false });
       if (data) render(data);
@@ -99,22 +111,27 @@
       if(!_list) return;
       _list.innerHTML = todos.map(t => `
         <div class="todo-item" data-id="${t.id}">
-          <input type="checkbox" ${t.is_complete ? 'checked' : ''} class="task-cb">
+          <input type="checkbox" ${t.is_complete ? 'checked' : ''} class="task-cb" style="width:18px; height:18px;">
           <div>
             <div class="todo-text ${t.is_complete ? 'completed' : ''}">${t.task}</div>
-            <div class="todo-meta">IP: ${t.ip_address || '---'}</div>
+            <div style="font-size:9px; color:#999">IP: ${t.ip_address || '---'}</div>
           </div>
           <button class="delete-btn">&times;</button>
         </div>
       `).join('');
     }
 
+    // Delegation
     _list.onclick = async (e) => {
       const item = e.target.closest('.todo-item');
       if (!item) return;
       const id = item.dataset.id;
-      if (e.target.classList.contains('task-cb')) await supabase.from('todos').update({ is_complete: e.target.checked }).eq('id', id);
-      if (e.target.classList.contains('delete-btn')) await supabase.from('todos').delete().eq('id', id);
+      if (e.target.classList.contains('task-cb')) {
+        await supabase.from('todos').update({ is_complete: e.target.checked }).eq('id', id);
+      } 
+      if (e.target.classList.contains('delete-btn')) {
+        await supabase.from('todos').delete().eq('id', id);
+      }
     };
 
     function initRealtime(user) {
@@ -124,8 +141,6 @@
       _channel
         .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, (payload) => {
           if (payload.eventType === 'INSERT') toast(`➕ Added: ${payload.new.task}`);
-          if (payload.eventType === 'DELETE') toast(`🗑️ Removed`);
-          if (payload.eventType === 'UPDATE') toast(payload.new.is_complete ? "✅ Done" : "🔄 Reopened");
           load();
         })
         .on('presence', { event: 'sync' }, () => {
@@ -133,15 +148,7 @@
           const pList = document.getElementById('presence-list');
           if(pList) pList.innerHTML = Object.keys(state).map(n => `<div class="user-pill">● ${n}</div>`).join('');
         })
-        .on('broadcast', { event: 'typing' }, ({ payload }) => {
-          const tBox = document.getElementById('typing-box');
-          if(tBox) tBox.innerText = payload.typing ? `${payload.name} is typing...` : '';
-        })
-        .subscribe(async (s) => { if (s === 'SUBSCRIBED') await _channel.track({ online: new Date() }); });
-
-      document.getElementById('todo-input').oninput = (e) => {
-        if (_channel.state === 'joined') _channel.send({ type: 'broadcast', event: 'typing', payload: { name: uName, typing: e.target.value.length > 0 } });
-      };
+        .subscribe(async (s) => { if (s === 'SUBSCRIBED') await _channel.track({ online_at: new Date() }); });
     }
 
     document.getElementById('todo-form').onsubmit = async (e) => {
