@@ -16,6 +16,7 @@
     body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); max-width: 500px; margin: 40px auto; padding: 20px; }
     .app-card { background: var(--card); padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
     
+    /* Presence & Status */
     #presence-list { display: flex; gap: 8px; margin-bottom: 12px; min-height: 30px; flex-wrap: wrap; align-items: center; }
     .user-pill { font-size: 11px; background: #e5e7eb; padding: 5px 12px; border-radius: 20px; color: var(--text-main); font-weight: 600; border: 1px solid #d1d5db; }
     .typing-indicator { font-size: 11px; color: var(--primary); font-style: italic; height: 18px; margin-bottom: 5px; }
@@ -34,11 +35,13 @@
       background: #f9fafb; 
       border-radius: 12px; 
       margin-bottom: 8px; 
+      transition: background 0.2s;
     }
-    .todo-text { font-size: 14px; font-weight: 500; }
+    .todo-content { display: flex; flex-direction: column; overflow: hidden; }
+    .todo-text { font-size: 14px; font-weight: 500; word-break: break-word; }
     .todo-meta { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
     .completed { text-decoration: line-through; color: #9ca3af; }
-    .delete-btn { color: #ef4444; background: none; font-size: 22px; cursor: pointer; border: none; }
+    .delete-btn { color: #ef4444; background: none; font-size: 22px; cursor: pointer; border: none; line-height: 1; }
 
     #toast { 
       position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; 
@@ -49,12 +52,12 @@
 </head>
 <body>
 
-  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px; font-weight: bold;">ONLINE NOW:</div>
+  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px; font-weight: bold; text-transform: uppercase;">Who's Online:</div>
   <div id="presence-list"></div>
 
   <div class="app-card">
     <div id="auth-ui">
-      <h2 style="margin:0 0 15px 0">Sign In</h2>
+      <h2 style="margin:0 0 15px 0">Shared List Sign In</h2>
       <input type="email" id="email" placeholder="Email">
       <input type="password" id="password" placeholder="Password">
       <button class="btn-primary" id="login-btn">Continue</button>
@@ -63,12 +66,12 @@
     <div id="todo-app" style="display: none;">
       <div style="display: flex; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
         <span id="display-name" style="font-size: 12px; font-weight: bold;"></span>
-        <button id="logout-btn" style="background:none; color:red; font-size:11px; border:none; cursor:pointer;">Logout</button>
+        <button id="logout-btn" style="background:none; color:red; font-size:11px; border:none; cursor:pointer; font-weight: bold;">Logout</button>
       </div>
 
       <div id="typing-box" class="typing-indicator"></div>
       <form id="todo-form">
-        <input type="text" id="todo-input" placeholder="Add to shared list..." required autocomplete="off">
+        <input type="text" id="todo-input" placeholder="Type a task and hit Enter..." required autocomplete="off">
         <button class="btn-primary" type="submit">Add Task</button>
       </form>
 
@@ -97,7 +100,7 @@
         const res = await fetch('https://api.ipify.org?format=json');
         const data = await res.json();
         userIP = data.ip;
-      } catch (e) { console.error("IP check failed"); }
+      } catch (e) { console.error("IP lookup failed"); }
     }
     getIP();
 
@@ -113,7 +116,7 @@
       setTimeout(() => t.style.display = 'none', 3000);
     }
 
-    // --- Auth ---
+    // --- Auth Logic ---
     document.getElementById('login-btn').onclick = async () => {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
@@ -121,23 +124,31 @@
       if (error) await supabase.auth.signUp({ email, password });
     };
 
-    document.getElementById('logout-btn').onclick = () => supabase.auth.signOut();
+    window.logout = async () => {
+      if (myChannel) await myChannel.unsubscribe();
+      // Force clear local session if 403 or other error occurs
+      const { error } = await supabase.auth.signOut();
+      if (error) console.warn("Forced local logout due to:", error.message);
+      window.location.reload(); 
+    };
+    document.getElementById('logout-btn').onclick = window.logout;
     
     window.clearCompleted = async () => {
-      await supabase.from('todos').delete().eq('is_complete', true);
+      const { error } = await supabase.from('todos').delete().eq('is_complete', true);
+      if (error) console.error(error);
     };
 
     supabase.auth.onAuthStateChange((event, session) => {
       document.getElementById('auth-ui').style.display = session ? 'none' : 'block';
       document.getElementById('todo-app').style.display = session ? 'block' : 'none';
       if (session) {
-        document.getElementById('display-name').innerText = "Logged in: " + cleanName(session.user.email);
+        document.getElementById('display-name').innerText = "Hi, " + cleanName(session.user.email);
         fetchTodos();
         initRealtime(session.user);
       }
     });
 
-    // --- Data ---
+    // --- Database Logic ---
     async function fetchTodos() {
       const { data } = await supabase.from('todos').select('*').order('id', { ascending: false });
       render(data || []);
@@ -153,7 +164,7 @@
           <input type="checkbox" ${t.is_complete ? 'checked' : ''} style="width: 18px; height: 18px; cursor:pointer;">
           <div class="todo-content">
             <div class="todo-text ${t.is_complete ? 'completed' : ''}">${t.task}</div>
-            <div class="todo-meta">IP: ${t.ip_address || '---'}</div>
+            <div class="todo-meta">Added by: ${t.ip_address || 'Unknown'}</div>
           </div>
           <button class="delete-btn">&times;</button>
         `;
@@ -172,6 +183,8 @@
       e.preventDefault();
       const input = document.getElementById('todo-input');
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return alert("Log in first!");
+      
       await supabase.from('todos').insert([{ 
         task: input.value, 
         user_id: user.id, 
@@ -181,45 +194,53 @@
       input.value = '';
     };
 
-    // --- Realtime ---
+    // --- Realtime / Presence / Broadcast ---
     function initRealtime(user) {
       if (myChannel) myChannel.unsubscribe();
-      const name = cleanName(user.email);
+      const myUserName = cleanName(user.email);
       
-      myChannel = supabase.channel('v_final', { config: { presence: { key: name } } });
+      myChannel = supabase.channel('shared_main', { config: { presence: { key: myUserName } } });
 
       myChannel
         .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, (payload) => {
-          // Comprehensive Alerts
-          if (payload.eventType === 'INSERT') showToast(`➕ ${name} added: ${payload.new.task}`);
-          if (payload.eventType === 'DELETE') showToast(`🗑️ A task was removed`);
+          // Comprehensive Realtime Alerts
+          if (payload.eventType === 'INSERT') showToast(`➕ Task added: ${payload.new.task}`);
+          if (payload.eventType === 'DELETE') showToast(`🗑️ Task removed`);
           if (payload.eventType === 'UPDATE') {
-             const status = payload.new.is_complete ? '✅ Completed' : '🔄 Re-opened';
-             showToast(`${status}: ${payload.new.task}`);
+             const action = payload.new.is_complete ? '✅ Finished' : '🔄 Re-opened';
+             showToast(`${action}: ${payload.new.task}`);
           }
 
-          fetchTodos();
+          fetchTodos(); // Refresh
           
           setTimeout(() => {
             const changedId = payload.new ? payload.new.id : payload.old.id;
             const el = document.querySelector(`[data-id="${changedId}"]`);
-            if (el) { el.classList.add('new-change'); setTimeout(() => el.classList.remove('new-change'), 2000); }
-          }, 150);
+            if (el) { 
+              el.classList.add('new-change'); 
+              setTimeout(() => el.classList.remove('new-change'), 2000); 
+            }
+          }, 100);
         })
         .on('presence', { event: 'sync' }, () => {
           const state = myChannel.presenceState();
           document.getElementById('presence-list').innerHTML = Object.keys(state)
-            .map(displayName => `<div class="user-pill">● ${displayName}</div>`).join('');
+            .map(name => `<div class="user-pill">● ${name}</div>`).join('');
         })
         .on('broadcast', { event: 'typing' }, ({ payload }) => {
           document.getElementById('typing-box').innerText = payload.typing ? `${payload.name} is typing...` : '';
         })
         .subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') await myChannel.track({ online_at: new Date() });
+          if (status === 'SUBSCRIBED') {
+            document.getElementById('status').innerHTML = '<span style="color:#10b981">● Live</span>';
+            await myChannel.track({ online_at: new Date() });
+          }
         });
 
       document.getElementById('todo-input').oninput = (e) => {
-        myChannel.send({ type: 'broadcast', event: 'typing', payload: { name: name, typing: e.target.value.length > 0 } });
+        if (myChannel.state === 'joined') {
+          myChannel.send({ type: 'broadcast', event: 'typing', payload: { name: myUserName, typing: e.target.value.length > 0 } });
+        }
       };
     }
   </script>
