@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Live Workspace | Reactions</title>
+  <title>Shared Workspace | Identity</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root { --primary: #10b981; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; --text-muted: #6b7280; }
@@ -10,9 +10,18 @@
     @keyframes pulse-highlight { 0% { background-color: rgba(16, 185, 129, 0.4); transform: scale(1.01); } 100% { transform: scale(1); } }
     .item-updated { animation: pulse-highlight 1.5s ease-out; }
 
+    /* Priorities */
     .priority-1 { border-left: 4px solid #9ca3af !important; }
     .priority-2 { border-left: 4px solid #3b82f6 !important; }
     .priority-3 { border-left: 4px solid #ef4444 !important; background-color: #fff1f2 !important; }
+
+    /* Identity Visuals */
+    .user-avatar {
+      width: 18px; height: 18px; border-radius: 50%; display: inline-flex;
+      align-items: center; justify-content: center; font-size: 9px;
+      font-weight: 900; margin-right: 6px; border: 1px solid rgba(0,0,0,0.1);
+      vertical-align: middle; color: #1f2937;
+    }
 
     .p-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: 800; margin-right: 8px; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); }
     .p-badge.priority-1 { background: #e5e7eb; color: #4b5563; }
@@ -21,17 +30,17 @@
 
     .reaction-container { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
     .reaction-btn { font-size: 11px; padding: 2px 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-    .reaction-btn:hover { border-color: var(--primary); }
 
     body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); max-width: 500px; margin: 40px auto; padding: 20px; }
     .app-card { background: var(--card); padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
     #presence-list { display: flex; gap: 8px; margin-bottom: 12px; min-height: 25px; flex-wrap: wrap; }
-    .user-pill { font-size: 10px; background: #e5e7eb; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+    .user-pill { font-size: 10px; padding: 4px 10px; border-radius: 20px; font-weight: 600; border: 1px solid rgba(0,0,0,0.1); }
+    
     input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; }
     .btn-primary { background: var(--primary); color: white; padding: 12px; width: 100%; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
     .todo-item { display: grid; grid-template-columns: 30px 1fr 40px; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 12px; margin-bottom: 8px; border: 1px solid transparent; }
     .todo-text { font-size: 14px; font-weight: 500; display: flex; align-items: center; }
-    .todo-meta { font-size: 9px; color: var(--text-muted); margin-top: 4px; }
+    .todo-meta { font-size: 9px; color: var(--text-muted); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
     .completed { text-decoration: line-through; opacity: 0.5; }
     .delete-btn { color: #ef4444; background: none; font-size: 22px; cursor: pointer; border: none; }
     #toast { position: fixed; bottom: 24px; right: 24px; background: #1f2937; color: white; padding: 14px 24px; border-radius: 12px; display: none; z-index: 9999; font-size: 14px; border-left: 4px solid var(--primary); }
@@ -43,15 +52,15 @@
 
   <div class="app-card">
     <div id="auth-ui">
-      <h2 style="margin-top:0">Shared Workspace</h2>
+      <h2 style="margin-top:0">Workspace Login</h2>
       <input type="email" id="user-email" placeholder="Email">
       <input type="password" id="user-pass" placeholder="Password">
       <button class="btn-primary" id="btn-login">Login</button>
-      <div style="margin-top: 15px; font-size: 13px; text-align: center;"><a href="signup.html" style="color: var(--primary); text-decoration: none;">Create account</a></div>
+      <div style="margin-top: 15px; text-align: center;"><a href="signup.html" style="color: var(--primary); text-decoration: none; font-size: 13px;">Create account</a></div>
     </div>
 
     <div id="todo-app" style="display: none;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><span id="display-user" style="font-size: 12px; font-weight: bold; color: var(--primary);"></span><button id="btn-logout" style="background:none; color:red; font-size:11px; border:none; cursor:pointer;">Logout</button></div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><span id="display-user" style="font-size: 12px; font-weight: bold;"></span><button id="btn-logout" style="background:none; color:red; font-size:11px; border:none; cursor:pointer;">Logout</button></div>
       <div id="typing-box" style="font-size:10px; color:var(--primary); height:14px; font-style:italic; margin-bottom:4px;"></div>
       <form id="todo-form">
         <input type="text" id="todo-input" placeholder="New task..." required autocomplete="off">
@@ -70,12 +79,20 @@
     let _channel, _ip = "Unknown", _uName = "User";
     const _list = document.getElementById('todo-list');
 
+    // --- Identity Helpers ---
+    function getHashColor(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      return `hsl(${Math.abs(hash % 360)}, 75%, 85%)`;
+    }
+
     async function getIP() { try { const r = await fetch('https://api.ipify.org?format=json'); const d = await r.json(); _ip = d.ip; } catch(e){} }
     getIP();
 
     function getName(email) { return email ? email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1) : "User"; }
     function toast(msg) { const t = document.getElementById('toast'); if(t){ t.innerText = msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 3000); } }
 
+    // --- Auth ---
     document.getElementById('btn-login').onclick = async () => {
       const { error } = await supabase.auth.signInWithPassword({ email: document.getElementById('user-email').value, password: document.getElementById('user-pass').value });
       if(error) alert(error.message);
@@ -88,6 +105,7 @@
       if (session) { _uName = getName(session.user.email); document.getElementById('display-user').innerText = "Active: " + _uName; load(); initRealtime(session.user); }
     });
 
+    // --- Data ---
     async function load() {
       const { data } = await supabase.from('todos').select('*').order('priority', { ascending: false }).order('id', { ascending: false });
       if (data) render(data);
@@ -97,20 +115,36 @@
       if(!_list) return;
       _list.innerHTML = todos.map(t => {
         const pLevel = t.priority || 1, pText = pLevel === 3 ? 'High' : pLevel === 2 ? 'Med' : 'Low';
-        const reactions = t.reactions || {};
+        const reactions = t.reactions || {}, creator = t.created_by_name || 'Team';
+        const color = getHashColor(creator), initial = creator.charAt(0);
+        
+        // Format Time
+        const time = t.created_at ? new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
         const reactionHTML = ['👍', '🙌', '👀', '🔥'].map(emoji => {
           const count = reactions[emoji] || 0;
           return `<button class="reaction-btn" data-action="react" data-emoji="${emoji}">${emoji} <span>${count > 0 ? count : ''}</span></button>`;
         }).join('');
 
-        return `<div class="todo-item priority-${pLevel}" data-id="${t.id}"><input type="checkbox" ${t.is_complete ? 'checked' : ''} class="task-cb" style="width:18px; height:18px; cursor:pointer;"><div><div class="todo-text ${t.is_complete ? 'completed' : ''}"><span class="p-badge priority-${pLevel}" data-action="cycle">${pText}</span> ${t.task}</div><div class="reaction-container">${reactionHTML}</div><div class="todo-meta">By: ${t.created_by_name || 'Team'}</div></div><button class="delete-btn">&times;</button></div>`;
+        return `
+          <div class="todo-item priority-${pLevel}" data-id="${t.id}">
+            <input type="checkbox" ${t.is_complete ? 'checked' : ''} class="task-cb" style="width:18px; height:18px; cursor:pointer;">
+            <div>
+              <div class="todo-text ${t.is_complete ? 'completed' : ''}"><span class="p-badge priority-${pLevel}" data-action="cycle">${pText}</span> ${t.task}</div>
+              <div class="reaction-container">${reactionHTML}</div>
+              <div class="todo-meta">
+                <span class="user-avatar" style="background:${color}">${initial}</span>
+                By: ${creator} • <span style="color:#10b981; font-weight:bold;">${time}</span> • IP: ${t.ip_address || '---'}
+              </div>
+            </div>
+            <button class="delete-btn">&times;</button>
+          </div>`;
       }).join('');
     }
 
     _list.onclick = async (e) => {
       const item = e.target.closest('.todo-item'), id = item?.dataset.id;
       if (!id) return;
-      
       const sendSig = (m) => { if (_channel) _channel.send({ type: 'broadcast', event: 'action', payload: { name: _uName, msg: m } }); };
 
       if (e.target.classList.contains('task-cb')) {
@@ -133,16 +167,18 @@
     };
 
     function initRealtime(user) {
-      _channel = supabase.channel('v_ultimate_final', { config: { presence: { key: _uName } } });
+      _channel = supabase.channel('v_ultimate_identity', { config: { presence: { key: _uName } } });
       _channel
         .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, async (p) => {
-          if (p.eventType === 'INSERT') toast(`➕ ${p.new.created_by_name} added: ${p.new.task}`);
+          if (p.eventType === 'INSERT') toast(`➕ ${p.new.created_by_name} added a task`);
           await load();
           setTimeout(() => { const row = document.querySelector(`[data-id="${p.new?.id || p.old?.id}"]`); if (row) { row.classList.add('item-updated'); setTimeout(() => row.classList.remove('item-updated'), 1500); } }, 100);
         })
         .on('presence', { event: 'sync' }, () => {
-          const s = _channel.presenceState(); document.title = `(${Object.keys(s).length}) Workspace`;
-          document.getElementById('presence-list').innerHTML = Object.keys(s).map(n => `<div class="user-pill">● ${n}</div>`).join('');
+          const s = _channel.presenceState();
+          document.title = `(${Object.keys(s).length}) Workspace`;
+          const pList = document.getElementById('presence-list');
+          if(pList) pList.innerHTML = Object.keys(s).map(n => `<div class="user-pill" style="background:${getHashColor(n)}">● ${n}</div>`).join('');
         })
         .on('broadcast', { event: 'action' }, ({ payload }) => toast(`📢 ${payload.name} ${payload.msg}`))
         .on('broadcast', { event: 'typing' }, ({ payload }) => { const b = document.getElementById('typing-box'); if(b) b.innerText = payload.typing ? `${payload.name} is typing...` : ''; })
