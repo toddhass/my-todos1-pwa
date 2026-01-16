@@ -26,6 +26,19 @@
     #presence-list { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; max-width: 550px; }
     .user-pill { font-size: 11px; padding: 5px 12px; border-radius: 20px; font-weight: 700; background: white; border: 1px solid #e2e8f0; }
   </style>
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#10b981">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<script>
+  // Register the Service Worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed', err));
+    });
+  }
+</script>
 </head>
 <body>
 
