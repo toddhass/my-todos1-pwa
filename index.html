@@ -2,30 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Shared Workspace</title>
+  <title>Shared Workspace - Fixed</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root { --primary: #10b981; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; }
-    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); max-width: 500px; margin: 40px auto; padding: 20px; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); max-width: 500px; margin: 40px auto; padding: 20px; }
     .app-card { background: var(--card); padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-    #presence-list { display: flex; gap: 8px; margin-bottom: 12px; min-height: 30px; align-items: center; }
-    .user-pill { font-size: 11px; background: #e5e7eb; padding: 5px 12px; border-radius: 20px; font-weight: 600; }
     input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; }
-    .btn-primary { background: var(--primary); color: white; padding: 12px; width: 100%; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
+    .btn-primary { background: var(--primary); color: white; padding: 12px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
     .todo-item { display: grid; grid-template-columns: 30px 1fr 40px; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 12px; margin-bottom: 8px; }
     .completed { text-decoration: line-through; color: #9ca3af; }
     .delete-btn { color: #ef4444; background: none; font-size: 22px; cursor: pointer; border: none; }
+    #toast { position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; padding: 14px 20px; border-radius: 12px; display: none; z-index: 1000; }
   </style>
 </head>
 <body>
-
-  <div id="presence-list"></div>
-
   <div class="app-card">
     <div id="auth-ui">
       <input type="email" id="email" placeholder="Email">
       <input type="password" id="password" placeholder="Password">
-      <button class="btn-primary" id="login-btn">Sign In</button>
+      <div style="display: flex; gap: 10px; margin-top: 10px;">
+        <button class="btn-primary" id="login-btn" style="flex:1">Login</button>
+        <button class="btn-primary" id="signup-btn" style="flex:1; background:#6b7280;">Sign Up</button>
+      </div>
     </div>
 
     <div id="todo-app" style="display: none;">
@@ -34,39 +33,41 @@
         <button id="logout-btn" style="background:none; color:red; font-size:11px; cursor:pointer; border:none;">Logout</button>
       </div>
       <form id="todo-form">
-        <input type="text" id="todo-input" placeholder="Add task..." required autocomplete="off">
-        <button class="btn-primary" type="submit">Add Task</button>
+        <input type="text" id="todo-input" placeholder="What needs doing?" required autocomplete="off">
+        <button class="btn-primary" type="submit" style="margin-top:10px;">Add Task</button>
       </form>
       <div id="todo-list" style="margin-top: 20px;"></div>
     </div>
   </div>
+  <div id="toast"></div>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
     const supabase = createClient('https://hdzmbngzplkgkchmxfwu.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkem1ibmd6cGxrZ2tjaG14Znd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzgyNzc3NjQsImV4cCI6MTk5Mzg1Mzc2NH0.ogb5FZ_nfUdIcobdas9EFm7u8vOs8-_RB2CB4MxLMAU');
 
-    let myChannel, userIP = "Unknown";
     const listEl = document.getElementById('todo-list');
-
-    async function getIP() { try { const res = await fetch('https://api.ipify.org?format=json'); const data = await res.json(); userIP = data.ip; } catch(e){} }
-    getIP();
+    let myChannel;
 
     document.getElementById('login-btn').onclick = async () => {
-      await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
-      await supabase.auth.signUp({ email: email.value, password: password.value });
+      const { error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
+      if (error) alert(error.message);
     };
-    document.getElementById('logout-btn').onclick = async () => { 
-        await supabase.auth.signOut(); 
-        window.location.reload(); 
+
+    document.getElementById('signup-btn').onclick = async () => {
+      const { error } = await supabase.auth.signUp({ email: email.value, password: password.value });
+      if (error) alert(error.message);
+      else alert("Confirmation email sent!");
     };
+
+    document.getElementById('logout-btn').onclick = () => { supabase.auth.signOut(); window.location.reload(); };
 
     supabase.auth.onAuthStateChange((event, session) => {
       document.getElementById('todo-app').style.display = session ? 'block' : 'none';
       document.getElementById('auth-ui').style.display = session ? 'none' : 'block';
       if (session) {
-        document.getElementById('display-name').innerText = session.user.email.split('@')[0];
+        document.getElementById('display-name').innerText = session.user.email;
         fetchTodos();
-        initRealtime(session.user);
+        initRealtime();
       }
     });
 
@@ -79,48 +80,31 @@
       listEl.innerHTML = todos.map(t => `
         <div class="todo-item" data-id="${t.id}">
           <input type="checkbox" ${t.is_complete ? 'checked' : ''} class="cb">
-          <div class="todo-text ${t.is_complete ? 'completed' : ''}">${t.task}</div>
+          <div class="${t.is_complete ? 'completed' : ''}">${t.task}</div>
           <button class="delete-btn">&times;</button>
         </div>
       `).join('');
     }
 
-    // Glocal listener for Checkboxes and Delete
     listEl.onclick = async (e) => {
       const item = e.target.closest('.todo-item');
       if (!item) return;
       const id = item.dataset.id;
-      if (e.target.classList.contains('cb')) {
-        await supabase.from('todos').update({ is_complete: e.target.checked }).eq('id', id);
-      } 
-      if (e.target.classList.contains('delete-btn')) {
-        await supabase.from('todos').delete().eq('id', id);
-      }
+      if (e.target.classList.contains('cb')) await supabase.from('todos').update({ is_complete: e.target.checked }).eq('id', id);
+      if (e.target.classList.contains('delete-btn')) await supabase.from('todos').delete().eq('id', id);
     };
 
-    function initRealtime(user) {
-      myChannel = supabase.channel('v_live')
+    function initRealtime() {
+      myChannel = supabase.channel('shared_v_fixed')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, fetchTodos)
-        .on('presence', { event: 'sync' }, () => {
-          const state = myChannel.presenceState();
-          document.getElementById('presence-list').innerHTML = Object.keys(state).map(n => `<div class="user-pill">${n}</div>`).join('');
-        })
-        .subscribe(async (status) => { if (status === 'SUBSCRIBED') await myChannel.track(user.email.split('@')[0]); });
+        .subscribe();
     }
 
     document.getElementById('todo-form').onsubmit = async (e) => {
       e.preventDefault();
       const input = document.getElementById('todo-input');
       const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) { alert("Session expired. Please login."); return; }
-
-      await supabase.from('todos').insert([{ 
-        task: input.value, 
-        user_id: user.id, 
-        is_complete: false, 
-        ip_address: userIP 
-      }]);
+      if (user) await supabase.from('todos').insert([{ task: input.value, user_id: user.id, is_complete: false }]);
       input.value = '';
     };
   </script>
