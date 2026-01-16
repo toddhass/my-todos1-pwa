@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Shared Live Todos</title>
+  <title>Live Shared List with IP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background:#f9fafb; }
-    h1 { color: #10b981; text-align: center; }
+    h1 { color: #10b981; text-align: center; margin-bottom: 5px; }
+    .status-bar { text-align: center; margin-bottom: 20px; font-size: 13px; }
     #auth-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
     #form { display: flex; gap: 10px; margin: 30px 0; }
     input { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
@@ -14,13 +15,18 @@
     .btn-primary { background: #10b981; color: white; padding: 12px 24px; }
     .btn-outline { background: #3b82f6; color: white; padding: 8px 16px; margin-right: 5px; }
     .btn-danger { background: #ef4444; color: white; padding: 5px 10px; font-size: 12px; }
-    .todo-item { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #eee; }
-    .live-indicator { font-size: 12px; color: #10b981; font-weight: normal; margin-left: 10px; }
+    .todo-item { display:flex; align-items:flex-start; gap:12px; padding:15px 0; border-bottom:1px solid #eee; }
+    .todo-content { flex: 1; }
+    .todo-meta { font-size: 11px; color: #888; margin-top: 4px; display: block; }
+    .live-dot { color: #10b981; }
   </style>
 </head>
 <body>
 
-  <h1>Shared List <span id="status" class="live-indicator">Connecting...</span></h1>
+  <h1>Shared List</h1>
+  <div class="status-bar">
+    <span id="status">○ Offline</span> | Your IP: <span id="my-ip">detecting...</span>
+  </div>
 
   <div id="auth-container">
     <div id="logged-out-ui">
@@ -39,7 +45,7 @@
 
   <div id="todo-app" style="display: none;">
     <form id="form">
-      <input type="text" id="todo-input" style="flex:1" placeholder="Add a task..." required>
+      <input type="text" id="todo-input" style="flex:1" placeholder="Add a shared task..." required>
       <button class="btn-primary" type="submit">Add</button>
     </form>
     <div id="list"></div>
@@ -52,10 +58,23 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkem1ibmd6cGxrZ2tjaG14Znd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzgyNzc3NjQsImV4cCI6MTk5Mzg1Mzc2NH0.ogb5FZ_nfUdIcobdas9EFm7u8vOs8-_RB2CB4MxLMAU';
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    let currentIp = 'Unknown';
+
+    // 1. Get current IP on load
+    async function getIP() {
+      try {
+        const res = await fetch('https://api.ipify.org?format=json');
+        const data = await res.json();
+        currentIp = data.ip;
+        document.getElementById('my-ip').innerText = currentIp;
+      } catch (e) { console.error("IP detection failed"); }
+    }
+    getIP();
+
     // --- Authentication ---
     window.signUp = async () => {
       const { error } = await supabase.auth.signUp({ email: email.value, password: password.value });
-      if (error) alert(error.message); else alert("Verify email if enabled!");
+      if (error) alert(error.message); else alert("Check your email!");
     };
     window.login = async () => {
       const { error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
@@ -65,34 +84,41 @@
 
     // --- Core Logic ---
     async function load() {
+      // We are fetching the IP column we will add to the table
       const { data, error } = await supabase.from('todos').select('*').order('id', { ascending: false });
       if (error) return console.error(error);
 
       const listEl = document.getElementById('list');
-      listEl.innerHTML = ''; // Clear current list
+      listEl.innerHTML = ''; 
 
       data.forEach(t => {
         const div = document.createElement('div');
         div.className = 'todo-item';
         
-        // Checkbox
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.checked = t.is_complete;
+        cb.style.marginTop = '4px';
         cb.onchange = async () => {
           await supabase.from('todos').update({ is_complete: cb.checked }).eq('id', t.id);
-          // With Realtime enabled, it will refresh, but let's be safe:
           load(); 
         };
 
-        // Text
-        const span = document.createElement('span');
-        span.style.flex = '1';
-        span.style.textDecoration = t.is_complete ? 'line-through' : 'none';
-        span.style.color = t.is_complete ? '#888' : '#000';
-        span.innerText = t.task;
+        const content = document.createElement('div');
+        content.className = 'todo-content';
+        
+        const text = document.createElement('div');
+        text.style.textDecoration = t.is_complete ? 'line-through' : 'none';
+        text.style.color = t.is_complete ? '#888' : '#000';
+        text.innerText = t.task;
 
-        // Delete Button
+        const meta = document.createElement('span');
+        meta.className = 'todo-meta';
+        // Displaying the IP address stored in the database
+        meta.innerText = `By: ${t.user_id.substring(0,8)}... | IP: ${t.ip_address || 'N/A'}`;
+
+        content.append(text, meta);
+
         const del = document.createElement('button');
         del.innerText = 'Delete';
         del.className = 'btn-danger';
@@ -101,24 +127,19 @@
           load();
         };
 
-        div.append(cb, span, del);
+        div.append(cb, content, del);
         listEl.appendChild(div);
       });
     }
 
-    // --- Setup Realtime ---
     function setupRealtime() {
-      supabase.channel('room1')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, (payload) => {
-          console.log('Realtime update:', payload);
-          load();
-        })
+      supabase.channel('global-list')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, load)
         .subscribe((status) => {
-          document.getElementById('status').innerText = (status === 'SUBSCRIBED') ? '● Live' : '○ Offline';
+          document.getElementById('status').innerHTML = (status === 'SUBSCRIBED') ? '<span class="live-dot">● Live</span>' : '○ Offline';
         });
     }
 
-    // --- Auth State Change ---
     supabase.auth.onAuthStateChange((event, session) => {
       document.getElementById('logged-in-ui').style.display = session ? 'flex' : 'none';
       document.getElementById('logged-out-ui').style.display = session ? 'none' : 'block';
@@ -130,13 +151,18 @@
       }
     });
 
-    // --- Form Submit ---
     document.getElementById('form').onsubmit = async (e) => {
       e.preventDefault();
       const input = document.getElementById('todo-input');
       const { data: { user } } = await supabase.auth.getUser();
       if (user && input.value) {
-        await supabase.from('todos').insert([{ task: input.value, is_complete: false, user_id: user.id }]);
+        // Saving the task WITH the captured IP address
+        await supabase.from('todos').insert([{ 
+          task: input.value, 
+          is_complete: false, 
+          user_id: user.id,
+          ip_address: currentIp 
+        }]);
         input.value = '';
         load();
       }
