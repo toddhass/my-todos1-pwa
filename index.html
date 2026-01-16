@@ -188,10 +188,17 @@
           }, 100);
         })
         .on('presence', { event: 'sync' }, () => {
-          const state = _channel.presenceState();
-          const pList = document.getElementById('presence-list');
-          if(pList) pList.innerHTML = Object.keys(state).map(n => `<div class="user-pill">● ${n}</div>`).join('');
-        })
+  const state = _channel.presenceState();
+  const count = Object.keys(state).length; // Get the number of users
+  
+  // Update the Presence List in the UI
+  const pList = document.getElementById('presence-list');
+  if(pList) pList.innerHTML = Object.keys(state).map(n => `<div class="user-pill">● ${n}</div>`).join('');
+  
+  // THE NEW PART: Update the Browser Tab Title
+  const baseTitle = "Live Workspace";
+  document.title = count > 0 ? `(${count}) ${baseTitle}` : baseTitle;
+})
         .on('broadcast', { event: 'typing' }, ({ payload }) => {
           const tBox = document.getElementById('typing-box');
           if(tBox) tBox.innerText = payload.typing ? `${payload.name} is typing...` : '';
