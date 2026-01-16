@@ -18,6 +18,15 @@
     .completed { text-decoration: line-through; color: #9ca3af; }
     .delete-btn { color: #ef4444; background: none; font-size: 20px; cursor: pointer; border: none; }
     #toast { position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; padding: 12px 20px; border-radius: 10px; display: none; z-index: 1000; border-left: 4px solid var(--primary); }
+    @keyframes pulse-highlight {
+  0% { background-color: rgba(16, 185, 129, 0.3); transform: scale(1.02); }
+  100% { background-color: #f9fafb; transform: scale(1); }
+}
+
+.item-updated {
+  animation: pulse-highlight 1.5s ease-out;
+  border-left: 4px solid var(--primary) !important;
+}
   </style>
 </head>
 <body>
