@@ -15,32 +15,15 @@
     }
 
     @keyframes highlight {
-      0% { background-color: rgba(16, 185, 129, 0.2); transform: scale(1.02); border-color: var(--primary); }
+      0% { background-color: rgba(16, 185, 129, 0.2); transform: scale(1.01); border-color: var(--primary); }
       100% { background-color: #f9fafb; transform: scale(1); border-color: transparent; }
     }
 
-    .new-change {
-      animation: highlight 2s ease-out;
-      z-index: 10;
-    }
+    .new-change { animation: highlight 2s ease-out; z-index: 10; }
 
-    body { 
-      font-family: 'Inter', system-ui, -apple-system, sans-serif; 
-      background: var(--bg); 
-      color: var(--text-main);
-      max-width: 500px; 
-      margin: 60px auto; 
-      padding: 20px; 
-    }
-
-    .app-card {
-      background: var(--card);
-      padding: 30px;
-      border-radius: 16px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-    }
-
-    h1 { font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 5px; letter-spacing: -0.025em; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text-main); max-width: 500px; margin: 60px auto; padding: 20px; }
+    .app-card { background: var(--card); padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+    h1 { font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 5px; }
     .status-bar { text-align: center; margin-bottom: 25px; font-size: 12px; color: var(--text-muted); }
     .live-dot { color: var(--primary); font-weight: bold; }
 
@@ -53,20 +36,17 @@
     .btn-outline { background: #f9fafb; color: var(--text-main); border: 1px solid #e5e7eb; padding: 10px 16px; }
     .btn-danger-link { background: none; color: #ef4444; font-size: 12px; padding: 5px; }
 
-    .todo-item { 
-      display: flex; align-items: center; gap: 12px; padding: 14px; 
-      background: #f9fafb; border-radius: 12px; margin-bottom: 10px; 
-      border: 1px solid transparent; transition: transform 0.2s;
-    }
-
+    .todo-item { display: flex; align-items: center; gap: 12px; padding: 14px; background: #f9fafb; border-radius: 12px; margin-bottom: 10px; border: 1px solid transparent; }
     .todo-content { flex: 1; }
     .todo-text { font-size: 15px; font-weight: 500; }
     .todo-meta { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 
     #toast {
       position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; 
-      padding: 12px 20px; border-radius: 10px; display: none; font-size: 13px; 
-      z-index: 1000; box-shadow: 0 10px 15px rgba(0,0,0,0.2);
+      padding: 14px 24px; border-radius: 12px; display: none; font-size: 14px; 
+      z-index: 1000; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+      border-left: 4px solid var(--primary);
+      min-width: 200px;
     }
   </style>
 </head>
@@ -193,11 +173,18 @@
     function setupRealtime() {
       supabase.channel('global-list')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, async (payload) => {
-          if (payload.eventType === 'INSERT') showToast(`New task: ${payload.new.task}`);
+          const { eventType, new: newRow, old: oldRow } = payload;
           
-          await load(); // Refresh data
+          if (eventType === 'INSERT') showToast(`➕ Added: ${newRow.task}`);
+          else if (eventType === 'UPDATE') {
+            const status = newRow.is_complete ? '✅ Completed' : '🔄 Reopened';
+            showToast(`${status}: ${newRow.task}`);
+          }
+          else if (eventType === 'DELETE') showToast(`🗑️ A task was removed`);
 
-          const changedId = payload.new ? payload.new.id : payload.old.id;
+          await load(); 
+
+          const changedId = newRow ? newRow.id : oldRow.id;
           const element = document.querySelector(`[data-id="${changedId}"]`);
           if (element) {
             element.classList.add('new-change');
