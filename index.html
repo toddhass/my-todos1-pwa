@@ -7,7 +7,7 @@
   <style>
     :root { --primary: #10b981; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; --text-muted: #6b7280; }
     
-    /* Animation for record changes */
+    /* Visual Pulse for changes */
     @keyframes pulse-highlight {
       0% { background-color: rgba(16, 185, 129, 0.4); transform: scale(1.02); }
       100% { background-color: #f9fafb; transform: scale(1); }
@@ -73,7 +73,7 @@
       </div>
       <div id="typing-box" style="font-size:11px; color:var(--primary); height:15px; font-style:italic; margin-bottom:5px;"></div>
       <form id="todo-form">
-        <input type="text" id="todo-input" placeholder="Add task to shared list..." required autocomplete="off">
+        <input type="text" id="todo-input" placeholder="What's the plan?" required autocomplete="off">
         <button class="btn-primary" type="submit">Add Task</button>
       </form>
       <div id="todo-list" style="margin-top: 20px;"></div>
@@ -123,7 +123,7 @@
       document.getElementById('auth-ui').style.display = session ? 'none' : 'block';
       if (session) {
         _uName = getName(session.user.email);
-        document.getElementById('display-user').innerText = "Active: " + _uName;
+        document.getElementById('display-user').innerText = "Logged in: " + _uName;
         load();
         initRealtime(session.user);
       }
@@ -142,61 +142,50 @@
           <input type="checkbox" ${t.is_complete ? 'checked' : ''} class="task-cb" style="width:18px; height:18px; cursor:pointer;">
           <div>
             <div class="todo-text ${t.is_complete ? 'completed' : ''}">${t.task}</div>
-            <div class="todo-meta">Source: ${t.ip_address || 'Internal'}</div>
+            <div class="todo-meta">By: ${t.created_by_name || 'Legacy'} • IP: ${t.ip_address || '---'}</div>
           </div>
           <button class="delete-btn">&times;</button>
         </div>
       `).join('');
     }
 
-    // Global Listener (Hardened Delegation)
     _list.onclick = async (e) => {
       const item = e.target.closest('.todo-item');
       if (!item) return;
       const id = item.dataset.id;
-      if (e.target.classList.contains('task-cb')) {
-        await supabase.from('todos').update({ is_complete: e.target.checked }).eq('id', id);
-      } 
-      if (e.target.classList.contains('delete-btn')) {
-        await supabase.from('todos').delete().eq('id', id);
-      }
+      if (e.target.classList.contains('task-cb')) await supabase.from('todos').update({ is_complete: e.target.checked }).eq('id', id);
+      if (e.target.classList.contains('delete-btn')) await supabase.from('todos').delete().eq('id', id);
     };
 
-    // --- Realtime / Presence / Tab Count ---
     function initRealtime(user) {
       _channel = supabase.channel('shared_v_final', { config: { presence: { key: _uName } } });
 
       _channel
         .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, async (payload) => {
-          // 1. Descriptive Toasts
-          if (payload.eventType === 'INSERT') toast(`➕ Task added: ${payload.new.task}`);
+          // 1. Toasts with Names
+          if (payload.eventType === 'INSERT') toast(`➕ ${payload.new.created_by_name || 'Someone'} added a task`);
           if (payload.eventType === 'DELETE') toast(`🗑️ Task removed`);
           if (payload.eventType === 'UPDATE') {
              const status = payload.new.is_complete ? "✅ Finished" : "🔄 Reopened";
-             toast(`${status}: ${payload.new.task}`);
+             toast(`${_uName} ${status.toLowerCase()}`);
           }
 
-          // 2. Refresh the list
           await load();
 
-          // 3. Visual Pulse Animation
+          // 2. Pulse Animation
           setTimeout(() => {
             const changedId = payload.new ? payload.new.id : payload.old.id;
             const row = document.querySelector(`[data-id="${changedId}"]`);
             if (row) {
               row.classList.add('item-updated');
-              setTimeout(() => row.classList.remove('item-updated'), 2000);
+              setTimeout(() => row.classList.remove('item-updated'), 1500);
             }
           }, 100);
         })
         .on('presence', { event: 'sync' }, () => {
           const state = _channel.presenceState();
           const count = Object.keys(state).length;
-          
-          // Update Tab Title with Count
           document.title = count > 1 ? `(${count}) Live Workspace` : `Live Workspace`;
-
-          // Update Online Pills
           const pList = document.getElementById('presence-list');
           if(pList) pList.innerHTML = Object.keys(state).map(n => `<div class="user-pill">● ${n}</div>`).join('');
         })
@@ -206,11 +195,8 @@
         })
         .subscribe(async (s) => { if (s === 'SUBSCRIBED') await _channel.track({ online_at: new Date() }); });
 
-      // Typing broadcast
       document.getElementById('todo-input').oninput = (e) => {
-        if (_channel.state === 'joined') {
-          _channel.send({ type: 'broadcast', event: 'typing', payload: { name: _uName, typing: e.target.value.length > 0 } });
-        }
+        if (_channel.state === 'joined') _channel.send({ type: 'broadcast', event: 'typing', payload: { name: _uName, typing: e.target.value.length > 0 } });
       };
     }
 
@@ -222,6 +208,7 @@
         await supabase.from('todos').insert([{ 
           task: input.value, 
           user_id: user.id, 
+          created_by_name: _uName,
           is_complete: false, 
           ip_address: _ip 
         }]);
