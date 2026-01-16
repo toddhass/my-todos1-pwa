@@ -2,95 +2,37 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Live Workspace | Premium</title>
+  <title>Live Workspace | Complete</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    :root { 
-      --primary: #10b981; 
-      --bg: #f8fafc; 
-      --card: #ffffff; 
-      --text: #0f172a; 
-      --text-muted: #64748b; 
-      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    }
+    :root { --primary: #10b981; --bg: #f8fafc; --text: #0f172a; --text-muted: #64748b; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); color: var(--text); max-width: 550px; margin: 40px auto; padding: 20px; min-height: 100vh; }
     
-    body { 
-      font-family: 'Inter', system-ui, -apple-system, sans-serif; 
-      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); 
-      color: var(--text); 
-      max-width: 550px; 
-      margin: 40px auto; 
-      padding: 20px;
-      min-height: 100vh;
-    }
-
-    /* Modern Card Styling */
+    /* Luxury Card Styling */
     .todo-item { 
-      display: grid; 
-      grid-template-columns: 40px 1fr; 
-      gap: 12px; 
-      padding: 18px; 
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(10px);
-      border-radius: 16px; 
-      margin-bottom: 16px; 
-      border: 1px solid rgba(255, 255, 255, 0.5);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      box-shadow: var(--shadow);
+      display: grid; grid-template-columns: 40px 1fr; gap: 12px; padding: 18px; 
+      background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px);
+      border-radius: 16px; margin-bottom: 16px; border: 1px solid rgba(255, 255, 255, 0.5);
+      transition: all 0.3s ease; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
-
-    .todo-item:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1);
-      border-color: var(--primary);
-    }
-
-    /* Animation for Realtime Updates */
-    @keyframes pulse-in { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 100% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); } }
-    .item-updated { animation: pulse-in 1s ease-out; }
-
-    /* Priorities & Claiming */
-    .priority-1 { border-left: 5px solid #94a3b8 !important; }
-    .priority-2 { border-left: 5px solid #3b82f6 !important; }
+    .todo-item:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
     .priority-3 { border-left: 5px solid #ef4444 !important; background: #fff1f2 !important; }
+    .priority-2 { border-left: 5px solid #3b82f6 !important; }
+    .priority-1 { border-left: 5px solid #94a3b8 !important; }
 
-    .claimed-row { border: 2px solid var(--claim-color) !important; }
-
-    /* Typography & Hierarchy */
-    .todo-text { font-size: 16px; font-weight: 600; color: #1e293b; line-height: 1.5; margin: 4px 0; }
-    .completed { text-decoration: line-through; opacity: 0.4; filter: grayscale(1); }
-    .todo-meta { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-
-    /* Badges & Buttons */
-    .p-badge { font-size: 8px; letter-spacing: 0.05em; padding: 3px 8px; border-radius: 20px; font-weight: 800; cursor: pointer; border: 1px solid rgba(0,0,0,0.05); }
-    .due-badge { font-size: 10px; padding: 2px 8px; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
-    .due-future { background: #dcfce7; color: #166534; }
-    .due-soon { background: #fef9c3; color: #854d0e; }
-    .due-overdue { background: #fee2e2; color: #991b1b; }
-
-    .reaction-container { display: flex; gap: 6px; margin-top: 12px; align-items: center; width: 100%; }
-    .reaction-btn { font-size: 12px; padding: 4px 10px; background: white; border: 1px solid #e2e8f0; border-radius: 20px; cursor: pointer; transition: 0.2s; }
-    .reaction-btn:hover { border-color: var(--primary); transform: scale(1.1); }
-
-    .claim-btn { font-size: 11px; padding: 4px 12px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-weight: 700; color: var(--primary); margin-left: auto; transition: 0.2s; }
-    .claim-btn.active-claim { background: var(--primary); color: white; border-color: var(--primary); }
-
-    .user-avatar { width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; border: 1px solid rgba(0,0,0,0.1); }
+    .todo-text { font-size: 16px; font-weight: 600; color: #1e293b; line-height: 1.5; }
+    .completed { text-decoration: line-through; opacity: 0.4; }
     
-    /* Header & Forms */
-    .app-card { background: white; padding: 32px; border-radius: 24px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
-    #presence-list { display: flex; gap: 8px; margin-bottom: 20px; }
-    .user-pill { font-size: 11px; padding: 5px 12px; border-radius: 20px; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .p-badge { font-size: 8px; padding: 3px 8px; border-radius: 20px; font-weight: 800; cursor: pointer; border: 1px solid rgba(0,0,0,0.05); }
+    .reaction-btn { font-size: 12px; padding: 4px 10px; background: white; border: 1px solid #e2e8f0; border-radius: 20px; cursor: pointer; margin-right: 4px; }
+    .claim-btn { font-size: 11px; padding: 4px 12px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; color: var(--primary); font-weight: bold; margin-left: auto; }
+    .active-claim { background: var(--primary) !important; color: white !important; }
 
-    input, select { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 15px; transition: border 0.2s; }
-    input:focus { outline: none; border-color: var(--primary); ring: 2px solid var(--primary); }
-    .btn-primary { background: var(--primary); color: white; padding: 14px; width: 100%; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39); }
-    
-    .delete-btn { position: absolute; top: 12px; right: 12px; color: #cbd5e1; background: none; border: none; font-size: 20px; cursor: pointer; opacity: 0; transition: 0.2s; }
-    .todo-item:hover .delete-btn { opacity: 1; color: #ef4444; }
-
-    #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px; display: none; z-index: 10000; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); font-weight: 600; }
+    .app-card { background: white; padding: 32px; border-radius: 24px; box-shadow: 0 20px 25px rgba(0,0,0,0.1); }
+    input, select { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 15px; box-sizing: border-box; }
+    .btn-primary { background: var(--primary); color: white; padding: 14px; width: 100%; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; }
+    #presence-list { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .user-pill { font-size: 11px; padding: 5px 12px; border-radius: 20px; font-weight: 700; background: white; border: 1px solid #e2e8f0; }
   </style>
 </head>
 <body>
@@ -99,25 +41,30 @@
 
   <div class="app-card">
     <div id="auth-ui">
-      <h2 style="text-align: center; margin-bottom: 24px;">Workspace</h2>
-      <input type="email" id="user-email" placeholder="Email address">
-      <input type="password" id="user-pass" placeholder="Password">
-      <button class="btn-primary" id="btn-login">Sign In</button>
+      <h2 id="auth-title" style="text-align: center;">Sign In</h2>
+      <div id="signup-fields" style="display: none;">
+        <input type="text" id="reg-name" placeholder="Full Name (e.g. Alex)">
+      </div>
+      <input type="email" id="auth-email" placeholder="Email">
+      <input type="password" id="auth-pass" placeholder="Password">
+      <button class="btn-primary" id="btn-auth-go">Continue</button>
+      <p style="text-align: center; font-size: 13px; margin-top: 20px;">
+        <span id="auth-msg">Need an account?</span> 
+        <a href="#" id="auth-toggle" style="color: var(--primary); font-weight: 700; text-decoration: none;">Sign Up</a>
+      </p>
     </div>
 
     <div id="todo-app" style="display: none;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <span id="display-user" style="font-weight: 800; font-size: 13px; color: var(--primary);"></span>
-        <button id="btn-logout" style="color: #94a3b8; background: none; border: none; cursor: pointer; font-size: 12px;">Logout</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <span id="user-display" style="font-weight: 800; font-size: 13px; color: var(--primary);"></span>
+        <button onclick="supabase.auth.signOut().then(()=>location.reload())" style="color: #94a3b8; background: none; border: none; cursor: pointer; font-size: 12px;">Logout</button>
       </div>
       
-      <div id="typing-box" style="font-size:11px; color:var(--primary); height:16px; margin-bottom:8px;"></div>
-      
       <form id="todo-form">
-        <input type="text" id="todo-input" placeholder="What needs to be done?" required>
+        <input type="text" id="task-input" placeholder="What's the goal?" required>
         <div style="display: flex; gap: 10px;">
-          <select id="todo-priority" style="flex: 1;"><option value="1">Low</option><option value="2">Medium</option><option value="3">High</option></select>
-          <input type="datetime-local" id="todo-due" style="flex: 2;">
+          <select id="task-prio" style="flex: 1;"><option value="1">Low</option><option value="2">Med</option><option value="3">High</option></select>
+          <input type="datetime-local" id="task-due" style="flex: 2;">
         </div>
         <button class="btn-primary" type="submit" style="margin-top: 10px;">Add Task</button>
       </form>
@@ -125,135 +72,99 @@
       <div id="todo-list" style="margin-top: 30px;"></div>
     </div>
   </div>
-  <div id="toast"></div>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
     const supabase = createClient('https://hdzmbngzplkgkchmxfwu.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkem1ibmd6cGxrZ2tjaG14Znd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzgyNzc3NjQsImV4cCI6MTk5Mzg1Mzc2NH0.ogb5FZ_nfUdIcobdas9EFm7u8vOs8-_RB2CB4MxLMAU');
+    window.supabase = supabase;
 
-    let _channel, _ip = "Local", _uName = "User";
-    const _list = document.getElementById('todo-list');
+    let _uName = "User", _isSignUp = false, _chan;
 
-    // Helpers
-    const getHashColor = (s, d=false) => {
-      let h = 0; for(let i=0; i<s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
-      return `hsl(${Math.abs(h % 360)}, 70%, ${d ? '35%' : '88%'})`;
+    // --- Auth Toggle ---
+    document.getElementById('auth-toggle').onclick = (e) => {
+      e.preventDefault();
+      _isSignUp = !_isSignUp;
+      document.getElementById('auth-title').innerText = _isSignUp ? "Create Account" : "Sign In";
+      document.getElementById('signup-fields').style.display = _isSignUp ? "block" : "none";
+      document.getElementById('auth-msg').innerText = _isSignUp ? "Have an account?" : "Need an account?";
+      e.target.innerText = _isSignUp ? "Sign In" : "Sign Up";
     };
 
-    const getDueStatus = (ds) => {
-      if(!ds) return '';
-      const diff = new Date(ds) - new Date();
-      let label, cls;
-      if(diff < 0) { label="Overdue"; cls="due-overdue"; }
-      else if(diff < 7200000) { label=Math.floor(diff/60000) + "m left"; cls="due-soon"; }
-      else { label=new Date(ds).toLocaleDateString([], {month:'short', day:'numeric'}); cls="due-future"; }
-      return `<span class="due-badge ${cls}">🕒 ${label}</span>`;
+    document.getElementById('btn-auth-go').onclick = async () => {
+      const email = document.getElementById('auth-email').value;
+      const pass = document.getElementById('auth-pass').value;
+      if (_isSignUp) {
+        const name = document.getElementById('reg-name').value;
+        const { error } = await supabase.auth.signUp({ email, password: pass, options: { data: { display_name: name } } });
+        if(error) alert(error.message); else alert("Check email or try logging in!");
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+        if(error) alert(error.message);
+      }
     };
 
-    async function getIP() { try { const r=await fetch('https://api.ipify.org?format=json'); const d=await r.json(); _ip=d.ip; } catch(e){} }
-    getIP();
-
-    const toast = (m) => { const t=document.getElementById('toast'); t.innerText=m; t.style.display='block'; setTimeout(()=>t.style.display='none', 3000); };
-
-    // Auth
-    document.getElementById('btn-login').onclick = async () => {
-      const { error } = await supabase.auth.signInWithPassword({ email: document.getElementById('user-email').value, password: document.getElementById('user-pass').value });
-      if(error) alert(error.message);
-    };
-    document.getElementById('btn-logout').onclick = async () => { await supabase.auth.signOut(); window.location.reload(); };
-
+    // --- State Management ---
     supabase.auth.onAuthStateChange((event, session) => {
-      document.getElementById('todo-app').style.display = session ? 'block' : 'none';
-      document.getElementById('auth-ui').style.display = session ? 'none' : 'block';
-      if (session) { _uName = session.user.email.split('@')[0]; _uName = _uName.charAt(0).toUpperCase() + _uName.slice(1); document.getElementById('display-user').innerText = "✦ " + _uName; load(); initRealtime(); }
+      if (session) {
+        document.getElementById('auth-ui').style.display = 'none';
+        document.getElementById('todo-app').style.display = 'block';
+        _uName = session.user.user_metadata?.display_name || session.user.email.split('@')[0];
+        document.getElementById('user-display').innerText = "✦ " + _uName.toUpperCase();
+        load(); initLive();
+      }
     });
 
     async function load() {
       const { data } = await supabase.from('todos').select('*').order('priority', { ascending: false }).order('id', { ascending: false });
-      if (data) render(data);
-    }
-
-    function render(todos) {
-      _list.innerHTML = todos.map(t => {
-        const pLvl = t.priority || 1;
-        const pTxt = pLvl === 3 ? 'URGENT' : pLvl === 2 ? 'MED' : 'LOW';
-        const cb = t.claimed_by;
+      const listEl = document.getElementById('todo-list');
+      listEl.innerHTML = (data || []).map(t => {
+        const reactions = t.reactions || {};
         return `
-          <div class="todo-item priority-${pLvl} ${cb ? 'claimed-row' : ''}" data-id="${t.id}" style="--claim-color: ${getHashColor(cb || '')}">
-            <div style="padding-top: 4px;"><input type="checkbox" ${t.is_complete ? 'checked' : ''} class="task-cb" style="width:20px; height:20px; accent-color:var(--primary); cursor:pointer;"></div>
+          <div class="todo-item priority-${t.priority}" data-id="${t.id}">
+            <div><input type="checkbox" ${t.is_complete ? 'checked' : ''} onchange="updateTask(${t.id}, {is_complete: this.checked})"></div>
             <div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span class="p-badge priority-${pLvl}" data-action="cycle">${pTxt}</span>
-                ${getDueStatus(t.due_at)}
-              </div>
               <div class="todo-text ${t.is_complete ? 'completed' : ''}">${t.task}</div>
-              ${cb ? `<span style="font-size:10px; font-weight:800; color:${getHashColor(cb, true)}">☝️ ${cb} is working on this</span>` : ''}
-              <div class="todo-meta">
-                <span class="user-avatar" style="background:${getHashColor(t.created_by_name || 'Team')}">${(t.created_by_name || 'T').charAt(0)}</span>
-                ${t.created_by_name || 'Team'} • ${t.ip_address || '---'}
+              ${t.claimed_by ? `<div style="font-size:10px; font-weight:bold; color:var(--primary); margin:4px 0;">☝️ ${t.claimed_by} is on this</div>` : ''}
+              <div style="display:flex; align-items:center; margin-top:10px;">
+                ${['👍','🙌','👀','🔥'].map(e => `<button class="reaction-btn" onclick="react(${t.id}, '${e}')">${e} ${reactions[e]||''}</button>`).join('')}
+                <button class="claim-btn ${t.claimed_by === _uName ? 'active-claim' : ''}" onclick="claim(${t.id})">${t.claimed_by === _uName ? 'Claimed ✓' : 'Claim'}</button>
               </div>
-              <div class="reaction-container">
-                ${['👍', '🙌', '👀', '🔥'].map(e => `<button class="reaction-btn" data-action="react" data-emoji="${e}">${e} ${(t.reactions || {})[e] || ''}</button>`).join('')}
-                <button class="claim-btn ${cb === _uName ? 'active-claim' : ''}" data-action="claim">${cb === _uName ? '✓ My Task' : (cb ? 'Take Over' : 'Claim')}</button>
-              </div>
+              <div style="font-size:9px; color:gray; margin-top:10px;">By: ${t.created_by_name || 'Team'}</div>
             </div>
-            <button class="delete-btn">&times;</button>
+            <button onclick="deleteTask(${t.id})" style="position:absolute; top:10px; right:10px; background:none; border:none; color:#ccc; cursor:pointer;">&times;</button>
           </div>`;
       }).join('');
     }
 
-    _list.onclick = async (e) => {
-      const id = e.target.closest('.todo-item')?.dataset.id;
-      if(!id) return;
-      const sig = (m) => _channel.send({ type: 'broadcast', event: 'action', payload: { name: _uName, msg: m } });
-
-      if (e.target.classList.contains('task-cb')) {
-        await supabase.from('todos').update({ is_complete: e.target.checked }).eq('id', id);
-        sig(e.target.checked ? "finished a task" : "reopened a task");
-      } else if (e.target.classList.contains('delete-btn')) {
-        await supabase.from('todos').delete().eq('id', id);
-        sig("deleted a task");
-      } else if (e.target.dataset.action === 'cycle') {
-        const cur = e.target.classList.contains('priority-3') ? 3 : e.target.classList.contains('priority-2') ? 2 : 1;
-        await supabase.from('todos').update({ priority: cur >= 3 ? 1 : cur + 1 }).eq('id', id);
-        sig("changed urgency");
-      } else if (e.target.dataset.action === 'claim') {
-        await supabase.from('todos').update({ claimed_by: _uName }).eq('id', id);
-        sig("claimed a task");
-      } else if (e.target.dataset.action === 'react') {
-        const emoji = e.target.dataset.emoji;
-        const { data } = await supabase.from('todos').select('reactions').eq('id', id).single();
-        let r = data.reactions || {}; r[emoji] = (r[emoji] || 0) + 1;
-        await supabase.from('todos').update({ reactions: r }).eq('id', id);
-        sig(`reacted ${emoji}`);
-      }
+    // --- Global Actions ---
+    window.updateTask = async (id, obj) => { await supabase.from('todos').update(obj).eq('id', id); };
+    window.deleteTask = async (id) => { await supabase.from('todos').delete().eq('id', id); };
+    window.claim = async (id) => { await supabase.from('todos').update({ claimed_by: _uName }).eq('id', id); };
+    window.react = async (id, emoji) => {
+      const { data } = await supabase.from('todos').select('reactions').eq('id', id).single();
+      let r = data.reactions || {}; r[emoji] = (r[emoji] || 0) + 1;
+      await supabase.from('todos').update({ reactions: r }).eq('id', id);
     };
-
-    function initRealtime() {
-      _channel = supabase.channel('v_luxury', { config: { presence: { key: _uName } } });
-      _channel
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, async (p) => {
-          await load();
-          setTimeout(() => { const r = document.querySelector(`[data-id="${p.new?.id || p.old?.id}"]`); if(r) r.classList.add('item-updated'); }, 100);
-        })
-        .on('presence', { event: 'sync' }, () => {
-          const s = _channel.presenceState();
-          document.getElementById('presence-list').innerHTML = Object.keys(s).map(n => `<div class="user-pill" style="background:${getHashColor(n)}">● ${n}</div>`).join('');
-        })
-        .on('broadcast', { event: 'action' }, ({ payload }) => toast(`📢 ${payload.name} ${payload.msg}`))
-        .on('broadcast', { event: 'typing' }, ({ payload }) => { const b=document.getElementById('typing-box'); b.innerText = payload.typing ? payload.name + " is typing..." : ''; })
-        .subscribe(async (s) => { if (s === 'SUBSCRIBED') await _channel.track({ online_at: new Date() }); });
-
-      document.getElementById('todo-input').oninput = (e) => _channel.send({ type:'broadcast', event:'typing', payload:{ name:_uName, typing:e.target.value.length > 0 } });
-    }
 
     document.getElementById('todo-form').onsubmit = async (e) => {
       e.preventDefault();
-      const i=document.getElementById('todo-input'), p=document.getElementById('todo-priority'), d=document.getElementById('todo-due');
-      await supabase.from('todos').insert([{ task: i.value, created_by_name: _uName, priority: parseInt(p.value), due_at: d.value || null, is_complete: false, ip_address: _ip, reactions: {} }]);
-      i.value = ''; d.value = '';
+      const input = document.getElementById('task-input');
+      const prio = document.getElementById('task-prio');
+      const due = document.getElementById('task-due');
+      await supabase.from('todos').insert([{ 
+        task: input.value, priority: parseInt(prio.value), 
+        due_at: due.value || null, created_by_name: _uName 
+      }]);
+      input.value = '';
     };
-    setInterval(load, 30000);
+
+    function initLive() {
+      _chan = supabase.channel('live-sync').on('postgres_changes', { event:'*', schema:'public', table:'todos' }, load)
+        .on('presence', { event: 'sync' }, () => {
+          const s = _chan.presenceState();
+          document.getElementById('presence-list').innerHTML = Object.keys(s).map(n => `<div class="user-pill">● ${n}</div>`).join('');
+        }).subscribe(async (s) => { if(s==='SUBSCRIBED') await _chan.track({ online_at: new Date() }); });
+    }
   </script>
 </body>
 </html>
