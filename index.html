@@ -2,17 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Live Workspace | Time Master</title>
+  <title>Live Workspace | Claims</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root { --primary: #10b981; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; --text-muted: #6b7280; }
-    
     @keyframes pulse-highlight { 0% { background-color: rgba(16, 185, 129, 0.4); transform: scale(1.01); } 100% { transform: scale(1); } }
     .item-updated { animation: pulse-highlight 1.5s ease-out; }
 
     .priority-1 { border-left: 4px solid #9ca3af !important; }
     .priority-2 { border-left: 4px solid #3b82f6 !important; }
     .priority-3 { border-left: 4px solid #ef4444 !important; background-color: #fff1f2 !important; }
+
+    .claimed-row { border: 2px solid var(--claim-color) !important; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .claim-btn { font-size: 10px; padding: 2px 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; cursor: pointer; font-weight: bold; color: var(--primary); }
+    .claim-btn.active-claim { background: var(--primary); color: white; border-color: var(--primary); }
+    .claim-text { font-size: 10px; font-weight: 800; margin-top: 4px; display: block; }
 
     .due-badge { font-size: 10px; padding: 2px 8px; border-radius: 5px; font-weight: bold; margin-left: 8px; display: inline-flex; align-items: center; }
     .due-future { background: #dcfce7; color: #166534; }
@@ -25,7 +29,7 @@
     .p-badge.priority-2 { background: #dbeafe; color: #1e40af; }
     .p-badge.priority-3 { background: #fee2e2; color: #991b1b; }
 
-    .reaction-container { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+    .reaction-container { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
     .reaction-btn { font-size: 11px; padding: 2px 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
 
     body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); max-width: 500px; margin: 40px auto; padding: 20px; }
@@ -35,7 +39,7 @@
     
     input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; }
     .btn-primary { background: var(--primary); color: white; padding: 12px; width: 100%; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
-    .todo-item { display: grid; grid-template-columns: 30px 1fr 40px; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 12px; margin-bottom: 8px; border: 1px solid transparent; }
+    .todo-item { display: grid; grid-template-columns: 30px 1fr 40px; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 12px; margin-bottom: 8px; border: 2px solid transparent; }
     .todo-text { font-size: 14px; font-weight: 500; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
     .todo-meta { font-size: 9px; color: var(--text-muted); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
     .completed { text-decoration: line-through; opacity: 0.5; }
@@ -49,7 +53,7 @@
 
   <div class="app-card">
     <div id="auth-ui">
-      <h2 style="margin-top:0">Workspace</h2>
+      <h2 style="margin-top:0">Live Hub</h2>
       <input type="email" id="user-email" placeholder="Email">
       <input type="password" id="user-pass" placeholder="Password">
       <button class="btn-primary" id="btn-login">Login</button>
@@ -60,7 +64,7 @@
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><span id="display-user" style="font-size: 12px; font-weight: bold;"></span><button id="btn-logout" style="background:none; color:red; font-size:11px; border:none; cursor:pointer;">Logout</button></div>
       <div id="typing-box" style="font-size:10px; color:var(--primary); height:14px; font-style:italic; margin-bottom:4px;"></div>
       <form id="todo-form">
-        <input type="text" id="todo-input" placeholder="New task..." required autocomplete="off">
+        <input type="text" id="todo-input" placeholder="What's next?" required autocomplete="off">
         <div style="display: flex; gap: 10px;">
           <select id="todo-priority" style="flex: 1;"><option value="1">Low</option><option value="2">Medium</option><option value="3">High</option></select>
           <input type="datetime-local" id="todo-due" style="flex: 2;">
@@ -79,8 +83,10 @@
     let _channel, _ip = "Unknown", _uName = "User";
     const _list = document.getElementById('todo-list');
 
-    // --- Identity & Time Helpers ---
-    function getHashColor(str) { let hash = 0; for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash); return `hsl(${Math.abs(hash % 360)}, 75%, 85%)`; }
+    function getHashColor(str, darker = false) { 
+      let hash = 0; for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash); 
+      return `hsl(${Math.abs(hash % 360)}, 75%, ${darker ? '40%' : '85%'})`; 
+    }
     async function getIP() { try { const r = await fetch('https://api.ipify.org?format=json'); const d = await r.json(); _ip = d.ip; } catch(e){} }
     getIP();
 
@@ -97,7 +103,6 @@
     function getName(email) { return email ? email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1) : "User"; }
     function toast(msg) { const t = document.getElementById('toast'); if(t){ t.innerText = msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 3000); } }
 
-    // --- Auth ---
     document.getElementById('btn-login').onclick = async () => {
       const { error } = await supabase.auth.signInWithPassword({ email: document.getElementById('user-email').value, password: document.getElementById('user-pass').value });
       if(error) alert(error.message);
@@ -110,7 +115,6 @@
       if (session) { _uName = getName(session.user.email); document.getElementById('display-user').innerText = "Active: " + _uName; load(); initRealtime(session.user); }
     });
 
-    // --- Data ---
     async function load() {
       const { data } = await supabase.from('todos').select('*').order('priority', { ascending: false }).order('id', { ascending: false });
       if (data) render(data);
@@ -121,7 +125,9 @@
       _list.innerHTML = todos.map(t => {
         const pLevel = t.priority || 1, pText = pLevel === 3 ? 'High' : pLevel === 2 ? 'Med' : 'Low';
         const reactions = t.reactions || {}, creator = t.created_by_name || 'Team';
-        const color = getHashColor(creator);
+        const claimedBy = t.claimed_by;
+        const claimColor = claimedBy ? getHashColor(claimedBy) : 'transparent';
+        const isMyClaim = claimedBy === _uName;
         
         const reactionHTML = ['👍', '🙌', '👀', '🔥'].map(emoji => {
           const count = reactions[emoji] || 0;
@@ -129,18 +135,23 @@
         }).join('');
 
         return `
-          <div class="todo-item priority-${pLevel}" data-id="${t.id}">
+          <div class="todo-item priority-${pLevel} ${claimedBy ? 'claimed-row' : ''}" data-id="${t.id}" style="--claim-color: ${claimColor}">
             <input type="checkbox" ${t.is_complete ? 'checked' : ''} class="task-cb" style="width:18px; height:18px; cursor:pointer;">
             <div>
               <div class="todo-text ${t.is_complete ? 'completed' : ''}">
                 <span class="p-badge priority-${pLevel}" data-action="cycle">${pText}</span> 
-                ${t.task} 
-                ${getDueStatus(t.due_at)}
+                ${t.task} ${getDueStatus(t.due_at)}
               </div>
-              <div class="reaction-container">${reactionHTML}</div>
+              ${claimedBy ? `<span class="claim-text" style="color:${getHashColor(claimedBy, true)}">☝️ ${claimedBy} is handling this</span>` : ''}
+              <div class="reaction-container">
+                ${reactionHTML}
+                <button class="claim-btn ${isMyClaim ? 'active-claim' : ''}" data-action="claim">
+                  ${isMyClaim ? 'My Task' : (claimedBy ? 'Take Over' : 'Claim Task')}
+                </button>
+              </div>
               <div class="todo-meta">
-                <span class="user-avatar" style="background:${color}">${creator.charAt(0)}</span>
-                By: ${creator} • IP: ${t.ip_address || '---'}
+                <span class="user-avatar" style="background:${getHashColor(creator)}">${creator.charAt(0)}</span>
+                By: ${creator}
               </div>
             </div>
             <button class="delete-btn">&times;</button>
@@ -163,6 +174,9 @@
         const cur = e.target.classList.contains('priority-3') ? 3 : e.target.classList.contains('priority-2') ? 2 : 1;
         await supabase.from('todos').update({ priority: cur >= 3 ? 1 : cur + 1 }).eq('id', id);
         sendSig("changed urgency");
+      } else if (e.target.dataset.action === 'claim') {
+        await supabase.from('todos').update({ claimed_by: _uName }).eq('id', id);
+        sendSig("claimed a task");
       } else if (e.target.closest('[data-action="react"]')) {
         const emoji = e.target.closest('[data-action="react"]').dataset.emoji;
         const { data } = await supabase.from('todos').select('reactions').eq('id', id).single();
@@ -173,7 +187,7 @@
     };
 
     function initRealtime(user) {
-      _channel = supabase.channel('v_ultimate_time', { config: { presence: { key: _uName } } });
+      _channel = supabase.channel('v_ultimate_claims', { config: { presence: { key: _uName } } });
       _channel
         .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, async (p) => {
           await load();
@@ -196,13 +210,11 @@
       const { data: { user } } = await supabase.auth.getUser();
       if (user) await supabase.from('todos').insert([{ 
         task: i.value, user_id: user.id, created_by_name: _uName, priority: parseInt(p.value), 
-        due_at: d.value || null, is_complete: false, ip_address: _ip, reactions: {} 
+        due_at: d.value || null, is_complete: false, ip_address: _ip, reactions: {}, claimed_by: null
       }]);
       i.value = ''; d.value = '';
     };
-
-    // Auto-refresh every minute to update countdowns
-    setInterval(load, 60000);
+    setInterval(load, 30000);
   </script>
 </body>
 </html>
